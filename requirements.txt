@@ -1,0 +1,12 @@
+pandas
+numpy
+scipy
+scikit-learn
+statsmodels
+streamlit
+openai
+langchain
+langchain-openai
+python-dotenv
+pytest
+pip-tools
