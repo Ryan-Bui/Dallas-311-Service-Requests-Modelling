@@ -1,0 +1,3520 @@
+{
+  "models": [
+    {
+      "Model": "Logistic Regression",
+      "Accuracy": 0.68,
+      "ROC_AUC": 0.7920203735144313
+    },
+    {
+      "Model": "Random Forest",
+      "Accuracy": 0.82,
+      "ROC_AUC": 0.8794567062818337
+    },
+    {
+      "Model": "XGBoost",
+      "Accuracy": 0.82,
+      "ROC_AUC": 0.8671477079796265
+    }
+  ],
+  "best_model": "Random Forest",
+  "diagnostics": {
+    "normality_stat": 538.5386,
+    "normality_p": 0.0,
+    "normality_pass": false,
+    "skewness": 5.1245,
+    "log_skewness": -0.0269,
+    "log_transform_recommended": true,
+    "class_imbalance_ratio": 0.3823,
+    "class_imbalance_detected": false,
+    "target_distribution": {
+      "1": 0.6177062374245473,
+      "0": 0.3822937625754527
+    },
+    "columns_with_missing": {
+      "City Council District": 2,
+      "Overall Service Request Due Date": 110,
+      "ERT_days": 12
+    },
+    "total_missing": 124,
+    "overall_pass": false
+  },
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\sample2.csv",
+  "started_at": "2026-04-19T06:32:25.959897",
+  "finished_at": "2026-04-19T06:34:13.492864",
+  "regularization": {
+    "best_method": "Ridge",
+    "best_roc_auc": 0.7958,
+    "all_results": {
+      "Ridge": {
+        "best_alpha": 10.0,
+        "roc_auc": 0.7958
+      },
+      "LASSO": {
+        "best_alpha": 0.01,
+        "roc_auc": 0.7954
+      },
+      "ElasticNet": {
+        "best_alpha": 0.01,
+        "roc_auc": 0.7958
+      }
+    },
+    "coef_summary": [
+      {
+        "Method": "Ridge",
+        "Feature": "Priority",
+        "Coefficient": -0.104553
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Priority",
+        "Coefficient": -0.189091
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Method Received Description",
+        "Coefficient": -0.149757
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_grouped",
+        "Coefficient": 0.880092
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "month",
+        "Coefficient": 0.104868
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "day_of_week",
+        "Coefficient": -0.15996
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "hour",
+        "Coefficient": 0.022306
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "ERT_days",
+        "Coefficient": -0.229887
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_10",
+        "Coefficient": -0.425437
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_11",
+        "Coefficient": 1.170075
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_12",
+        "Coefficient": -0.311793
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_13",
+        "Coefficient": -0.489842
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_14",
+        "Coefficient": 0.624409
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_2",
+        "Coefficient": 0.214359
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_3",
+        "Coefficient": -0.900079
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_4",
+        "Coefficient": 0.729886
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_5",
+        "Coefficient": -0.004278
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_6",
+        "Coefficient": 0.028883
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_7",
+        "Coefficient": 0.080379
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_8",
+        "Coefficient": -0.269192
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_9",
+        "Coefficient": -0.323822
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "City Council District_nan",
+        "Coefficient": -0.460894
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Code Compliance",
+        "Coefficient": -0.097846
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Dallas Animal Services",
+        "Coefficient": 0.356819
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Dallas Fire Rescue",
+        "Coefficient": 0.197868
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Dallas Water Utilities",
+        "Coefficient": 0.251081
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Office of Budget",
+        "Coefficient": 0.086489
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Office of Emergency Management and Crisis Response",
+        "Coefficient": -0.028569
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Parks Department",
+        "Coefficient": -0.411376
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Planning & Development Department",
+        "Coefficient": 0.162279
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Police Department",
+        "Coefficient": -1.492675
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Public Works",
+        "Coefficient": 0.187051
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Sanitation",
+        "Coefficient": -0.500545
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Sanitation Services",
+        "Coefficient": 0.464448
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Transportation",
+        "Coefficient": 0.683286
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Transportation and Public Works Department",
+        "Coefficient": 0.153897
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Department_Water Utilities",
+        "Coefficient": -0.368742
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Animal Loose - DAS",
+        "Coefficient": -0.057574
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Code Concern - CCS",
+        "Coefficient": 0.081311
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Complaint/Compliment - 311",
+        "Coefficient": -0.959109
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Dead Animal Pick Up - DAS",
+        "Coefficient": 0.326772
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Homeless Encampment - OHS",
+        "Coefficient": -0.319199
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Other",
+        "Coefficient": -0.304522
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Parking - Report a Violation - TPW",
+        "Coefficient": 1.134707
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Parking - Report a Violation - TRN",
+        "Coefficient": 1.938724
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Pot Hole - Routine - PBW",
+        "Coefficient": 0.306851
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Sanitation Missed Garbage - SAN",
+        "Coefficient": -1.025303
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Sanitation Missed Recycle - SAN",
+        "Coefficient": 0.120771
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Sanitation Roll Cart Maintenance/Delivery - SAN",
+        "Coefficient": -0.639567
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Street Repair - Routine - PBW",
+        "Coefficient": -0.119585
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Traffic Signal - Flashing - TRN",
+        "Coefficient": 0.171897
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Service Request Type_Water/Wastewater Line Locate - 311",
+        "Coefficient": 0.561644
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2020 Dec 03 12:59:00 AM",
+        "Coefficient": 0.007572
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2020 Dec 18 12:59:00 AM",
+        "Coefficient": 0.002739
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2020 Nov 18 12:59:00 AM",
+        "Coefficient": -0.082828
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2020 Nov 19 12:59:00 AM",
+        "Coefficient": 0.038895
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2020 Oct 16 11:59:00 PM",
+        "Coefficient": 0.026405
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Apr 02 11:59:00 PM",
+        "Coefficient": -0.13129
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Apr 07 11:59:00 PM",
+        "Coefficient": -0.085548
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Apr 26 11:59:00 PM",
+        "Coefficient": -0.15317
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Apr 29 11:59:00 PM",
+        "Coefficient": 0.020206
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Apr 30 11:59:00 PM",
+        "Coefficient": 0.132397
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Aug 05 11:59:00 PM",
+        "Coefficient": -0.211657
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Aug 09 11:59:00 PM",
+        "Coefficient": 0.004799
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Aug 11 11:59:00 PM",
+        "Coefficient": 0.017094
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Aug 16 11:59:00 PM",
+        "Coefficient": 0.042667
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Aug 19 11:59:00 PM",
+        "Coefficient": 0.018763
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Aug 24 11:59:00 PM",
+        "Coefficient": 0.001812
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Dec 01 12:59:00 AM",
+        "Coefficient": 0.044737
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Dec 02 12:59:00 AM",
+        "Coefficient": 0.083409
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Dec 09 12:59:00 AM",
+        "Coefficient": 0.170051
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Dec 10 12:59:00 AM",
+        "Coefficient": 0.00914
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Dec 31 12:59:00 AM",
+        "Coefficient": 0.002329
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Feb 12 12:59:00 AM",
+        "Coefficient": 0.008162
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jan 01 12:59:00 AM",
+        "Coefficient": 0.290021
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jan 07 12:59:00 AM",
+        "Coefficient": -0.244369
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jan 28 12:59:00 AM",
+        "Coefficient": 0.066161
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jul 01 11:59:00 PM",
+        "Coefficient": 0.019242
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jul 12 11:59:00 PM",
+        "Coefficient": 0.196928
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jul 19 11:59:00 PM",
+        "Coefficient": -0.288567
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jul 22 11:59:00 PM",
+        "Coefficient": 0.016797
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jun 01 11:59:00 PM",
+        "Coefficient": 0.004593
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jun 11 11:59:00 PM",
+        "Coefficient": 0.009916
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jun 17 11:59:00 PM",
+        "Coefficient": 0.026291
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jun 18 11:59:00 PM",
+        "Coefficient": 0.012587
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Jun 30 11:59:00 PM",
+        "Coefficient": 0.210959
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Mar 03 12:59:00 AM",
+        "Coefficient": -0.101802
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Mar 11 12:59:00 AM",
+        "Coefficient": -0.11651
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Mar 16 11:59:00 PM",
+        "Coefficient": 0.01518
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 May 11 11:59:00 PM",
+        "Coefficient": 0.202962
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 May 26 11:59:00 PM",
+        "Coefficient": -0.24639
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 May 28 11:59:00 PM",
+        "Coefficient": 0.015128
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Nov 01 11:59:00 PM",
+        "Coefficient": 0.178932
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Nov 17 12:59:00 AM",
+        "Coefficient": 0.21484
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Nov 25 12:59:00 AM",
+        "Coefficient": -0.052419
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Oct 02 11:59:00 PM",
+        "Coefficient": 0.006019
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Oct 04 11:59:00 PM",
+        "Coefficient": 0.038025
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Oct 06 11:59:00 PM",
+        "Coefficient": 0.075648
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Oct 12 11:59:00 PM",
+        "Coefficient": -0.172427
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 01 11:59:00 PM",
+        "Coefficient": -0.13916
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 07 11:59:00 PM",
+        "Coefficient": -0.330351
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 08 11:59:00 PM",
+        "Coefficient": 0.039766
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 10 11:59:00 PM",
+        "Coefficient": 0.094641
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 17 11:59:00 PM",
+        "Coefficient": -0.102256
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 20 11:59:00 PM",
+        "Coefficient": 0.148098
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2021 Sep 23 11:59:00 PM",
+        "Coefficient": 0.004713
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Apr 07 11:59:00 PM",
+        "Coefficient": -0.241676
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Apr 12 11:59:00 PM",
+        "Coefficient": 0.383609
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Apr 19 11:59:00 PM",
+        "Coefficient": -0.448738
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Apr 21 11:59:00 PM",
+        "Coefficient": 0.007816
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Apr 22 11:59:00 PM",
+        "Coefficient": 0.017342
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Apr 30 11:59:00 PM",
+        "Coefficient": 0.129441
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Aug 03 11:59:00 PM",
+        "Coefficient": 0.188352
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Aug 17 11:59:00 PM",
+        "Coefficient": 0.005184
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Aug 22 11:59:00 PM",
+        "Coefficient": 0.019975
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Aug 29 11:59:00 PM",
+        "Coefficient": 0.001043
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 01 12:59:00 AM",
+        "Coefficient": -0.142405
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 03 12:59:00 AM",
+        "Coefficient": -0.193296
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 14 12:59:00 AM",
+        "Coefficient": 0.11728
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 17 12:59:00 AM",
+        "Coefficient": -0.301309
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 21 12:59:00 AM",
+        "Coefficient": -0.170579
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 22 12:59:00 AM",
+        "Coefficient": -0.185559
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 24 12:59:00 AM",
+        "Coefficient": 0.017599
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Dec 29 12:59:00 AM",
+        "Coefficient": -0.272287
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 01 12:59:00 AM",
+        "Coefficient": 0.007809
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 02 12:59:00 AM",
+        "Coefficient": -0.177148
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 04 12:59:00 AM",
+        "Coefficient": 0.343529
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 10 12:59:00 AM",
+        "Coefficient": -0.216977
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 12 12:59:00 AM",
+        "Coefficient": -0.049013
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 15 12:59:00 AM",
+        "Coefficient": 0.19142
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Feb 24 12:59:00 AM",
+        "Coefficient": 0.03426
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jan 19 12:59:00 AM",
+        "Coefficient": 0.00436
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jan 20 12:59:00 AM",
+        "Coefficient": -0.173393
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jul 05 11:59:00 PM",
+        "Coefficient": -0.138904
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jul 11 11:59:00 PM",
+        "Coefficient": 0.095677
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jul 13 11:59:00 PM",
+        "Coefficient": -0.129747
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jul 19 11:59:00 PM",
+        "Coefficient": -0.223902
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jul 21 11:59:00 PM",
+        "Coefficient": 0.008274
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jul 30 11:59:00 PM",
+        "Coefficient": 0.061974
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jun 08 11:59:00 PM",
+        "Coefficient": -0.228152
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jun 14 11:59:00 PM",
+        "Coefficient": 0.015487
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jun 17 11:59:00 PM",
+        "Coefficient": 0.006301
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Jun 22 11:59:00 PM",
+        "Coefficient": 0.040095
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Mar 01 12:59:00 AM",
+        "Coefficient": -0.180621
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Mar 03 12:59:00 AM",
+        "Coefficient": -0.192481
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Mar 10 12:59:00 AM",
+        "Coefficient": 0.004305
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Mar 12 12:59:00 AM",
+        "Coefficient": 0.354429
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Mar 22 11:59:00 PM",
+        "Coefficient": 0.286691
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 May 06 11:59:00 PM",
+        "Coefficient": 0.197868
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 May 12 11:59:00 PM",
+        "Coefficient": 0.011216
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 May 13 11:59:00 PM",
+        "Coefficient": -0.15243
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 May 19 11:59:00 PM",
+        "Coefficient": 0.003356
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 May 22 11:59:00 PM",
+        "Coefficient": 0.259779
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 May 31 11:59:00 PM",
+        "Coefficient": 0.022027
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Nov 08 12:59:00 AM",
+        "Coefficient": 0.015721
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Nov 22 12:59:00 AM",
+        "Coefficient": -0.284791
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Nov 23 12:59:00 AM",
+        "Coefficient": -0.218312
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Nov 27 12:59:00 AM",
+        "Coefficient": 0.076697
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Nov 30 12:59:00 AM",
+        "Coefficient": 0.246773
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 04 11:59:00 PM",
+        "Coefficient": -0.139709
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 15 11:59:00 PM",
+        "Coefficient": -0.389879
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 18 11:59:00 PM",
+        "Coefficient": 0.000599
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 19 11:59:00 PM",
+        "Coefficient": 0.264338
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 21 11:59:00 PM",
+        "Coefficient": 0.148377
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 24 11:59:00 PM",
+        "Coefficient": 0.035952
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Oct 28 11:59:00 PM",
+        "Coefficient": -0.158184
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Sep 01 11:59:00 PM",
+        "Coefficient": 0.060587
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Sep 05 11:59:00 PM",
+        "Coefficient": 0.006611
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Sep 21 11:59:00 PM",
+        "Coefficient": 0.046636
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2022 Sep 24 11:59:00 PM",
+        "Coefficient": 0.024702
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Apr 06 11:59:00 PM",
+        "Coefficient": -0.328231
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Apr 07 11:59:00 PM",
+        "Coefficient": -0.163626
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Apr 11 11:59:00 PM",
+        "Coefficient": 0.008881
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Apr 15 11:59:00 PM",
+        "Coefficient": -0.425521
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Apr 17 11:59:00 PM",
+        "Coefficient": 0.103774
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Aug 01 11:59:00 PM",
+        "Coefficient": 0.192508
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Aug 14 11:59:00 PM",
+        "Coefficient": -0.43031
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Aug 15 11:59:00 PM",
+        "Coefficient": 0.00711
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Aug 28 11:59:00 PM",
+        "Coefficient": 0.165715
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Dec 07 12:59:00 AM",
+        "Coefficient": 0.004361
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Dec 09 12:59:00 AM",
+        "Coefficient": 0.012128
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Dec 13 12:59:00 AM",
+        "Coefficient": 0.002381
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Dec 26 06:59:00 PM",
+        "Coefficient": 0.002758
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Feb 15 12:59:00 AM",
+        "Coefficient": -0.08805
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jan 05 12:59:00 AM",
+        "Coefficient": -0.264707
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jan 06 12:59:00 AM",
+        "Coefficient": -0.303486
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jan 10 12:59:00 AM",
+        "Coefficient": -0.126856
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jan 21 12:59:00 AM",
+        "Coefficient": -0.203614
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jan 24 12:59:00 AM",
+        "Coefficient": 0.074627
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jul 14 11:59:00 PM",
+        "Coefficient": 0.018888
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jul 25 11:59:00 PM",
+        "Coefficient": 0.018508
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jul 27 11:59:00 PM",
+        "Coefficient": 0.041307
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jun 01 11:59:00 PM",
+        "Coefficient": 0.005147
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jun 02 11:59:00 PM",
+        "Coefficient": 0.232805
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jun 13 11:59:00 PM",
+        "Coefficient": 0.004538
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jun 15 11:59:00 PM",
+        "Coefficient": 0.010404
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jun 23 11:59:00 PM",
+        "Coefficient": -0.330394
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Jun 30 11:59:00 PM",
+        "Coefficient": 0.318245
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Mar 14 11:59:00 PM",
+        "Coefficient": 0.011484
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Mar 18 11:59:00 PM",
+        "Coefficient": 0.067239
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Mar 21 11:59:00 PM",
+        "Coefficient": 0.088606
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Mar 28 11:59:00 PM",
+        "Coefficient": 0.007749
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 May 16 11:59:00 PM",
+        "Coefficient": 0.010365
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 May 18 11:59:00 PM",
+        "Coefficient": 0.007751
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 May 24 11:59:00 PM",
+        "Coefficient": 0.003623
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 May 30 11:59:00 PM",
+        "Coefficient": 0.176125
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 May 31 11:59:00 PM",
+        "Coefficient": -0.307785
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Nov 09 12:59:00 AM",
+        "Coefficient": -0.080489
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Nov 16 12:59:00 AM",
+        "Coefficient": -0.347715
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Nov 18 12:59:00 AM",
+        "Coefficient": 0.180257
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Oct 26 11:59:00 PM",
+        "Coefficient": 0.002798
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Sep 11 11:59:00 PM",
+        "Coefficient": -0.205874
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Sep 12 11:59:00 PM",
+        "Coefficient": 0.010299
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2023 Sep 14 11:59:00 PM",
+        "Coefficient": -0.915171
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Apr 04 06:59:00 PM",
+        "Coefficient": 0.03519
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Apr 22 08:56:38 PM",
+        "Coefficient": 0.245195
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Apr 23 11:59:00 PM",
+        "Coefficient": -0.082573
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 01 11:59:00 PM",
+        "Coefficient": -0.082606
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 16 11:59:00 PM",
+        "Coefficient": 0.014006
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 19 06:59:00 PM",
+        "Coefficient": 0.005293
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 25 11:59:00 PM",
+        "Coefficient": 0.054792
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 27 11:59:00 PM",
+        "Coefficient": 0.074476
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 28 06:59:00 PM",
+        "Coefficient": 0.097272
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Aug 30 11:59:00 PM",
+        "Coefficient": -0.048608
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Dec 04 12:59:00 AM",
+        "Coefficient": 0.011307
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Dec 06 12:59:00 AM",
+        "Coefficient": -0.108309
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Dec 11 06:59:00 PM",
+        "Coefficient": 0.007139
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Dec 11 12:59:00 AM",
+        "Coefficient": 0.007755
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Dec 19 06:59:00 PM",
+        "Coefficient": 0.269556
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Dec 31 12:59:00 AM",
+        "Coefficient": -0.232192
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Feb 03 12:59:00 AM",
+        "Coefficient": -0.03082
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Feb 08 12:59:00 AM",
+        "Coefficient": 0.041838
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Feb 13 06:59:00 PM",
+        "Coefficient": 0.027072
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Feb 14 06:59:00 PM",
+        "Coefficient": -0.100821
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Feb 14 12:59:00 AM",
+        "Coefficient": 0.218007
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jan 17 06:59:00 PM",
+        "Coefficient": 0.01348
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jan 25 06:59:00 PM",
+        "Coefficient": -0.205845
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jan 30 06:59:00 PM",
+        "Coefficient": 0.090197
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jul 06 11:59:00 PM",
+        "Coefficient": 0.005747
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jul 15 11:59:00 PM",
+        "Coefficient": -0.171286
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jul 16 06:59:00 PM",
+        "Coefficient": 0.162279
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jul 27 06:59:00 PM",
+        "Coefficient": 0.009926
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jul 29 11:59:00 PM",
+        "Coefficient": 0.003541
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jun 03 06:59:00 PM",
+        "Coefficient": -0.132313
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Jun 10 06:59:00 PM",
+        "Coefficient": 0.039891
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 07 12:59:00 AM",
+        "Coefficient": 0.123657
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 08 06:59:00 PM",
+        "Coefficient": 0.019784
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 15 01:24:46 PM",
+        "Coefficient": 0.019571
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 20 11:59:00 PM",
+        "Coefficient": 0.275026
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 21 06:59:00 PM",
+        "Coefficient": -0.080219
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 22 11:59:00 PM",
+        "Coefficient": 0.019695
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 26 06:59:00 PM",
+        "Coefficient": 0.151665
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Mar 27 06:59:00 PM",
+        "Coefficient": 0.077834
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 03 11:59:00 PM",
+        "Coefficient": -0.037143
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 06 11:59:00 PM",
+        "Coefficient": 0.021853
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 07 11:59:00 PM",
+        "Coefficient": 0.388496
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 14 06:59:00 PM",
+        "Coefficient": 0.016347
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 28 11:59:00 PM",
+        "Coefficient": 0.071554
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 30 01:17:21 PM",
+        "Coefficient": 0.110126
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 30 11:59:00 PM",
+        "Coefficient": 0.228103
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 May 31 11:59:00 PM",
+        "Coefficient": 0.014351
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Nov 01 11:59:00 PM",
+        "Coefficient": 0.041977
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Nov 13 12:59:00 AM",
+        "Coefficient": -0.100368
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Nov 15 06:59:00 PM",
+        "Coefficient": 0.002907
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Nov 19 12:59:00 AM",
+        "Coefficient": -0.10259
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Nov 22 06:59:00 PM",
+        "Coefficient": 0.013516
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Oct 17 11:59:00 PM",
+        "Coefficient": -0.078981
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Sep 10 11:59:00 PM",
+        "Coefficient": 0.001376
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Sep 11 11:59:00 PM",
+        "Coefficient": 0.144053
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Sep 16 11:59:00 PM",
+        "Coefficient": 0.178621
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Sep 18 11:59:00 PM",
+        "Coefficient": 0.00667
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Sep 20 11:59:00 PM",
+        "Coefficient": -0.082576
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2024 Sep 27 06:59:00 PM",
+        "Coefficient": -0.169455
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Apr 11 11:59:00 PM",
+        "Coefficient": -0.028304
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Apr 16 11:59:00 PM",
+        "Coefficient": -0.425304
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Aug 11 11:59:00 PM",
+        "Coefficient": 0.237782
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Aug 12 11:59:00 PM",
+        "Coefficient": 0.051975
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Aug 21 11:59:00 PM",
+        "Coefficient": 0.029595
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Aug 25 06:59:00 PM",
+        "Coefficient": 0.254861
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Aug 28 06:59:00 PM",
+        "Coefficient": 0.009328
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Dec 03 12:59:00 AM",
+        "Coefficient": 0.049325
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Dec 13 12:59:00 AM",
+        "Coefficient": 0.150058
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Dec 25 12:59:00 AM",
+        "Coefficient": 0.007362
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Dec 27 12:59:00 AM",
+        "Coefficient": 0.004614
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Feb 01 12:59:00 AM",
+        "Coefficient": -0.06042
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Feb 04 06:59:00 PM",
+        "Coefficient": 0.020776
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Feb 05 12:59:00 AM",
+        "Coefficient": 0.031332
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Feb 21 12:59:00 AM",
+        "Coefficient": 0.296052
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Feb 25 06:59:00 PM",
+        "Coefficient": -0.139221
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jan 02 06:59:00 PM",
+        "Coefficient": 0.022649
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jan 16 12:59:00 AM",
+        "Coefficient": -0.115812
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jan 25 12:59:00 AM",
+        "Coefficient": -0.216961
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jan 31 12:59:00 AM",
+        "Coefficient": 0.040218
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 08 06:59:00 PM",
+        "Coefficient": 0.004464
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 08 11:59:00 PM",
+        "Coefficient": -0.091481
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 16 06:59:00 PM",
+        "Coefficient": 0.032733
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 17 11:59:00 PM",
+        "Coefficient": 0.062474
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 18 11:59:00 PM",
+        "Coefficient": 0.029001
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 25 11:59:00 PM",
+        "Coefficient": 0.0
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 28 11:59:00 PM",
+        "Coefficient": 0.049117
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 29 06:59:00 PM",
+        "Coefficient": 0.148072
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jul 31 11:59:00 PM",
+        "Coefficient": -0.113018
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Jun 17 11:59:00 PM",
+        "Coefficient": 0.033991
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Mar 01 12:59:00 AM",
+        "Coefficient": 0.069502
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Mar 24 06:59:00 PM",
+        "Coefficient": 0.0212
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 May 15 06:59:00 PM",
+        "Coefficient": 0.082603
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 May 21 11:59:00 PM",
+        "Coefficient": -0.082101
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 May 23 06:59:00 PM",
+        "Coefficient": 0.007441
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Nov 18 12:59:00 AM",
+        "Coefficient": 0.018141
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 03 11:59:00 PM",
+        "Coefficient": 0.168511
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 05 11:59:00 PM",
+        "Coefficient": 0.080583
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 15 11:59:00 PM",
+        "Coefficient": 0.008093
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 16 11:59:00 PM",
+        "Coefficient": 0.008863
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 24 11:59:00 PM",
+        "Coefficient": 0.151505
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 27 11:59:00 PM",
+        "Coefficient": 0.046987
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 29 11:59:00 PM",
+        "Coefficient": 0.012122
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Oct 31 11:59:00 PM",
+        "Coefficient": -0.200731
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Sep 10 06:59:00 PM",
+        "Coefficient": 0.010882
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Sep 16 11:59:00 PM",
+        "Coefficient": 0.062111
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2025 Sep 22 11:59:00 PM",
+        "Coefficient": -0.064683
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Feb 03 12:59:00 AM",
+        "Coefficient": -0.157029
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Feb 19 12:59:00 AM",
+        "Coefficient": 0.079578
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 02 12:59:00 AM",
+        "Coefficient": -0.315029
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 05 06:59:00 PM",
+        "Coefficient": 0.0
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 07 12:59:00 AM",
+        "Coefficient": 0.090431
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 09 12:59:00 AM",
+        "Coefficient": -0.199893
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 12 06:59:00 PM",
+        "Coefficient": 0.0
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 14 12:59:00 AM",
+        "Coefficient": 0.129562
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 15 12:59:00 AM",
+        "Coefficient": -0.109708
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Jan 30 12:59:00 AM",
+        "Coefficient": 0.014977
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 01 12:59:00 AM",
+        "Coefficient": 0.120895
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 06 12:59:00 AM",
+        "Coefficient": 0.034695
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 10 11:59:00 PM",
+        "Coefficient": -0.212947
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 12 11:59:00 PM",
+        "Coefficient": -0.277851
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 18 11:59:00 PM",
+        "Coefficient": 0.080219
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 19 11:59:00 PM",
+        "Coefficient": 0.058458
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 Mar 20 11:59:00 PM",
+        "Coefficient": -0.161279
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_2026 May 20 11:59:00 PM",
+        "Coefficient": 0.310162
+      },
+      {
+        "Method": "LASSO",
+        "Feature": "Overall Service Request Due Date_nan",
+        "Coefficient": -0.255804
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Priority",
+        "Coefficient": -0.186847
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Method Received Description",
+        "Coefficient": -0.149719
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_grouped",
+        "Coefficient": 0.719689
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "month",
+        "Coefficient": 0.106098
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "day_of_week",
+        "Coefficient": -0.160934
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "hour",
+        "Coefficient": 0.023
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "ERT_days",
+        "Coefficient": -0.229388
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_10",
+        "Coefficient": -0.451737
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_11",
+        "Coefficient": 1.161957
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_12",
+        "Coefficient": -0.333822
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_13",
+        "Coefficient": -0.51453
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_14",
+        "Coefficient": 0.614669
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_2",
+        "Coefficient": 0.19946
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_3",
+        "Coefficient": -0.9246
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_4",
+        "Coefficient": 0.719155
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_5",
+        "Coefficient": -0.025248
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_6",
+        "Coefficient": 0.022536
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_7",
+        "Coefficient": 0.063731
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_8",
+        "Coefficient": -0.291419
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_9",
+        "Coefficient": -0.354036
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "City Council District_nan",
+        "Coefficient": -0.516295
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Code Compliance",
+        "Coefficient": -0.201964
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Dallas Animal Services",
+        "Coefficient": 0.398248
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Dallas Fire Rescue",
+        "Coefficient": 0.200281
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Dallas Water Utilities",
+        "Coefficient": 0.273716
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Office of Budget",
+        "Coefficient": 0.07985
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Office of Emergency Management and Crisis Response",
+        "Coefficient": -0.019337
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Parks Department",
+        "Coefficient": -0.464294
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Planning & Development Department",
+        "Coefficient": 0.16938
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Police Department",
+        "Coefficient": -1.460037
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Public Works",
+        "Coefficient": 0.202295
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Sanitation",
+        "Coefficient": -0.493413
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Sanitation Services",
+        "Coefficient": 0.528595
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Transportation",
+        "Coefficient": 0.720109
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Transportation and Public Works Department",
+        "Coefficient": 0.183771
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Department_Water Utilities",
+        "Coefficient": -0.381023
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Animal Loose - DAS",
+        "Coefficient": -0.044802
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Code Concern - CCS",
+        "Coefficient": 0.094671
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Complaint/Compliment - 311",
+        "Coefficient": -0.975293
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Dead Animal Pick Up - DAS",
+        "Coefficient": 0.370099
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Homeless Encampment - OHS",
+        "Coefficient": -0.340093
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Other",
+        "Coefficient": -0.316387
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Parking - Report a Violation - TPW",
+        "Coefficient": 1.124856
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Parking - Report a Violation - TRN",
+        "Coefficient": 1.888985
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Pot Hole - Routine - PBW",
+        "Coefficient": 0.333559
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Sanitation Missed Garbage - SAN",
+        "Coefficient": -1.023221
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Sanitation Missed Recycle - SAN",
+        "Coefficient": 0.159004
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Sanitation Roll Cart Maintenance/Delivery - SAN",
+        "Coefficient": -0.651275
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Street Repair - Routine - PBW",
+        "Coefficient": -0.14162
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Traffic Signal - Flashing - TRN",
+        "Coefficient": 0.174805
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Service Request Type_Water/Wastewater Line Locate - 311",
+        "Coefficient": 0.596034
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2020 Dec 03 12:59:00 AM",
+        "Coefficient": 0.010294
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2020 Dec 18 12:59:00 AM",
+        "Coefficient": 0.003649
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2020 Nov 18 12:59:00 AM",
+        "Coefficient": -0.10859
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2020 Nov 19 12:59:00 AM",
+        "Coefficient": 0.047726
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2020 Oct 16 11:59:00 PM",
+        "Coefficient": 0.034108
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Apr 02 11:59:00 PM",
+        "Coefficient": -0.138647
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Apr 07 11:59:00 PM",
+        "Coefficient": -0.094227
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Apr 26 11:59:00 PM",
+        "Coefficient": -0.156481
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Apr 29 11:59:00 PM",
+        "Coefficient": 0.032051
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Apr 30 11:59:00 PM",
+        "Coefficient": 0.133409
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Aug 05 11:59:00 PM",
+        "Coefficient": -0.224056
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Aug 09 11:59:00 PM",
+        "Coefficient": 0.00701
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Aug 11 11:59:00 PM",
+        "Coefficient": 0.021385
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Aug 16 11:59:00 PM",
+        "Coefficient": 0.046618
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Aug 19 11:59:00 PM",
+        "Coefficient": 0.028192
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Aug 24 11:59:00 PM",
+        "Coefficient": 0.002631
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Dec 01 12:59:00 AM",
+        "Coefficient": 0.051859
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Dec 02 12:59:00 AM",
+        "Coefficient": 0.087849
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Dec 09 12:59:00 AM",
+        "Coefficient": 0.167376
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Dec 10 12:59:00 AM",
+        "Coefficient": 0.011325
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Dec 31 12:59:00 AM",
+        "Coefficient": 0.003175
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Feb 12 12:59:00 AM",
+        "Coefficient": 0.010569
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jan 01 12:59:00 AM",
+        "Coefficient": 0.293792
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jan 07 12:59:00 AM",
+        "Coefficient": -0.253139
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jan 28 12:59:00 AM",
+        "Coefficient": 0.069214
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jul 01 11:59:00 PM",
+        "Coefficient": 0.032446
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jul 12 11:59:00 PM",
+        "Coefficient": 0.206606
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jul 19 11:59:00 PM",
+        "Coefficient": -0.304608
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jul 22 11:59:00 PM",
+        "Coefficient": 0.021643
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jun 01 11:59:00 PM",
+        "Coefficient": 0.005478
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jun 11 11:59:00 PM",
+        "Coefficient": 0.012507
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jun 17 11:59:00 PM",
+        "Coefficient": 0.030216
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jun 18 11:59:00 PM",
+        "Coefficient": 0.018766
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Jun 30 11:59:00 PM",
+        "Coefficient": 0.209562
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Mar 03 12:59:00 AM",
+        "Coefficient": -0.10892
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Mar 11 12:59:00 AM",
+        "Coefficient": -0.123762
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Mar 16 11:59:00 PM",
+        "Coefficient": 0.024907
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 May 11 11:59:00 PM",
+        "Coefficient": 0.20278
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 May 26 11:59:00 PM",
+        "Coefficient": -0.292781
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 May 28 11:59:00 PM",
+        "Coefficient": 0.019668
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Nov 01 11:59:00 PM",
+        "Coefficient": 0.182383
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Nov 17 12:59:00 AM",
+        "Coefficient": 0.216784
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Nov 25 12:59:00 AM",
+        "Coefficient": -0.061534
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Oct 02 11:59:00 PM",
+        "Coefficient": 0.007033
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Oct 04 11:59:00 PM",
+        "Coefficient": 0.047127
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Oct 06 11:59:00 PM",
+        "Coefficient": 0.080084
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Oct 12 11:59:00 PM",
+        "Coefficient": -0.182872
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 01 11:59:00 PM",
+        "Coefficient": -0.158762
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 07 11:59:00 PM",
+        "Coefficient": -0.349135
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 08 11:59:00 PM",
+        "Coefficient": 0.051093
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 10 11:59:00 PM",
+        "Coefficient": 0.102209
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 17 11:59:00 PM",
+        "Coefficient": -0.111604
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 20 11:59:00 PM",
+        "Coefficient": 0.149
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2021 Sep 23 11:59:00 PM",
+        "Coefficient": 0.005892
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Apr 07 11:59:00 PM",
+        "Coefficient": -0.246684
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Apr 12 11:59:00 PM",
+        "Coefficient": 0.440661
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Apr 19 11:59:00 PM",
+        "Coefficient": -0.493453
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Apr 21 11:59:00 PM",
+        "Coefficient": 0.008882
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Apr 22 11:59:00 PM",
+        "Coefficient": 0.026365
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Apr 30 11:59:00 PM",
+        "Coefficient": 0.130098
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Aug 03 11:59:00 PM",
+        "Coefficient": 0.195592
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Aug 17 11:59:00 PM",
+        "Coefficient": 0.006272
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Aug 22 11:59:00 PM",
+        "Coefficient": 0.032553
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Aug 29 11:59:00 PM",
+        "Coefficient": 0.001978
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 01 12:59:00 AM",
+        "Coefficient": -0.166466
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 03 12:59:00 AM",
+        "Coefficient": -0.239918
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 14 12:59:00 AM",
+        "Coefficient": 0.123666
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 17 12:59:00 AM",
+        "Coefficient": -0.332728
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 21 12:59:00 AM",
+        "Coefficient": -0.21427
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 22 12:59:00 AM",
+        "Coefficient": -0.224155
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 24 12:59:00 AM",
+        "Coefficient": 0.021952
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Dec 29 12:59:00 AM",
+        "Coefficient": -0.319794
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 01 12:59:00 AM",
+        "Coefficient": 0.010836
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 02 12:59:00 AM",
+        "Coefficient": -0.183477
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 04 12:59:00 AM",
+        "Coefficient": 0.358495
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 10 12:59:00 AM",
+        "Coefficient": -0.219482
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 12 12:59:00 AM",
+        "Coefficient": -0.047943
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 15 12:59:00 AM",
+        "Coefficient": 0.220312
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Feb 24 12:59:00 AM",
+        "Coefficient": 0.044837
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jan 19 12:59:00 AM",
+        "Coefficient": 0.004546
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jan 20 12:59:00 AM",
+        "Coefficient": -0.178085
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jul 05 11:59:00 PM",
+        "Coefficient": -0.154164
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jul 11 11:59:00 PM",
+        "Coefficient": 0.101383
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jul 13 11:59:00 PM",
+        "Coefficient": -0.14875
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jul 19 11:59:00 PM",
+        "Coefficient": -0.243542
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jul 21 11:59:00 PM",
+        "Coefficient": 0.008455
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jul 30 11:59:00 PM",
+        "Coefficient": 0.074616
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jun 08 11:59:00 PM",
+        "Coefficient": -0.224241
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jun 14 11:59:00 PM",
+        "Coefficient": 0.023157
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jun 17 11:59:00 PM",
+        "Coefficient": 0.007452
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Jun 22 11:59:00 PM",
+        "Coefficient": 0.053204
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Mar 01 12:59:00 AM",
+        "Coefficient": -0.191401
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Mar 03 12:59:00 AM",
+        "Coefficient": -0.194039
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Mar 10 12:59:00 AM",
+        "Coefficient": 0.005273
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Mar 12 12:59:00 AM",
+        "Coefficient": 0.368679
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Mar 22 11:59:00 PM",
+        "Coefficient": 0.294967
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 May 06 11:59:00 PM",
+        "Coefficient": 0.200281
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 May 12 11:59:00 PM",
+        "Coefficient": 0.013286
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 May 13 11:59:00 PM",
+        "Coefficient": -0.159362
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 May 19 11:59:00 PM",
+        "Coefficient": 0.004466
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 May 22 11:59:00 PM",
+        "Coefficient": 0.270286
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 May 31 11:59:00 PM",
+        "Coefficient": 0.036302
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Nov 08 12:59:00 AM",
+        "Coefficient": 0.021459
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Nov 22 12:59:00 AM",
+        "Coefficient": -0.316319
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Nov 23 12:59:00 AM",
+        "Coefficient": -0.239231
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Nov 27 12:59:00 AM",
+        "Coefficient": 0.079921
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Nov 30 12:59:00 AM",
+        "Coefficient": 0.245762
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 04 11:59:00 PM",
+        "Coefficient": -0.157238
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 15 11:59:00 PM",
+        "Coefficient": -0.453653
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 18 11:59:00 PM",
+        "Coefficient": 0.001445
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 19 11:59:00 PM",
+        "Coefficient": 0.303682
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 21 11:59:00 PM",
+        "Coefficient": 0.150885
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 24 11:59:00 PM",
+        "Coefficient": 0.046205
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Oct 28 11:59:00 PM",
+        "Coefficient": -0.158811
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Sep 01 11:59:00 PM",
+        "Coefficient": 0.067668
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Sep 05 11:59:00 PM",
+        "Coefficient": 0.006867
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Sep 21 11:59:00 PM",
+        "Coefficient": 0.052924
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2022 Sep 24 11:59:00 PM",
+        "Coefficient": 0.033626
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Apr 06 11:59:00 PM",
+        "Coefficient": -0.352564
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Apr 07 11:59:00 PM",
+        "Coefficient": -0.169137
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Apr 11 11:59:00 PM",
+        "Coefficient": 0.011988
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Apr 15 11:59:00 PM",
+        "Coefficient": -0.509178
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Apr 17 11:59:00 PM",
+        "Coefficient": 0.107323
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Aug 01 11:59:00 PM",
+        "Coefficient": 0.202912
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Aug 14 11:59:00 PM",
+        "Coefficient": -0.491002
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Aug 15 11:59:00 PM",
+        "Coefficient": 0.010258
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Aug 28 11:59:00 PM",
+        "Coefficient": 0.173664
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Dec 07 12:59:00 AM",
+        "Coefficient": 0.008382
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Dec 09 12:59:00 AM",
+        "Coefficient": 0.016568
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Dec 13 12:59:00 AM",
+        "Coefficient": 0.003512
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Dec 26 06:59:00 PM",
+        "Coefficient": 0.003969
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Feb 15 12:59:00 AM",
+        "Coefficient": -0.097867
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jan 05 12:59:00 AM",
+        "Coefficient": -0.331898
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jan 06 12:59:00 AM",
+        "Coefficient": -0.340633
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jan 10 12:59:00 AM",
+        "Coefficient": -0.131612
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jan 21 12:59:00 AM",
+        "Coefficient": -0.222941
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jan 24 12:59:00 AM",
+        "Coefficient": 0.075661
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jul 14 11:59:00 PM",
+        "Coefficient": 0.022365
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jul 25 11:59:00 PM",
+        "Coefficient": 0.022305
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jul 27 11:59:00 PM",
+        "Coefficient": 0.054375
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jun 01 11:59:00 PM",
+        "Coefficient": 0.009354
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jun 02 11:59:00 PM",
+        "Coefficient": 0.239213
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jun 13 11:59:00 PM",
+        "Coefficient": 0.005588
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jun 15 11:59:00 PM",
+        "Coefficient": 0.013734
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jun 23 11:59:00 PM",
+        "Coefficient": -0.440871
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Jun 30 11:59:00 PM",
+        "Coefficient": 0.353181
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Mar 14 11:59:00 PM",
+        "Coefficient": 0.016519
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Mar 18 11:59:00 PM",
+        "Coefficient": 0.079468
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Mar 21 11:59:00 PM",
+        "Coefficient": 0.094245
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Mar 28 11:59:00 PM",
+        "Coefficient": 0.009197
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 May 16 11:59:00 PM",
+        "Coefficient": 0.019596
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 May 18 11:59:00 PM",
+        "Coefficient": 0.013305
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 May 24 11:59:00 PM",
+        "Coefficient": 0.00463
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 May 30 11:59:00 PM",
+        "Coefficient": 0.184989
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 May 31 11:59:00 PM",
+        "Coefficient": -0.329559
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Nov 09 12:59:00 AM",
+        "Coefficient": -0.0891
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Nov 16 12:59:00 AM",
+        "Coefficient": -0.398491
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Nov 18 12:59:00 AM",
+        "Coefficient": 0.193077
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Oct 26 11:59:00 PM",
+        "Coefficient": 0.004044
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Sep 11 11:59:00 PM",
+        "Coefficient": -0.203775
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Sep 12 11:59:00 PM",
+        "Coefficient": 0.013017
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2023 Sep 14 11:59:00 PM",
+        "Coefficient": -1.011816
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Apr 04 06:59:00 PM",
+        "Coefficient": 0.044427
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Apr 22 08:56:38 PM",
+        "Coefficient": 0.286632
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Apr 23 11:59:00 PM",
+        "Coefficient": -0.090342
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 01 11:59:00 PM",
+        "Coefficient": -0.092857
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 16 11:59:00 PM",
+        "Coefficient": 0.021355
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 19 06:59:00 PM",
+        "Coefficient": 0.006983
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 25 11:59:00 PM",
+        "Coefficient": 0.067103
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 27 11:59:00 PM",
+        "Coefficient": 0.088621
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 28 06:59:00 PM",
+        "Coefficient": 0.108395
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Aug 30 11:59:00 PM",
+        "Coefficient": -0.056013
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Dec 04 12:59:00 AM",
+        "Coefficient": 0.017817
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Dec 06 12:59:00 AM",
+        "Coefficient": -0.11114
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Dec 11 06:59:00 PM",
+        "Coefficient": 0.007832
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Dec 11 12:59:00 AM",
+        "Coefficient": 0.012656
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Dec 19 06:59:00 PM",
+        "Coefficient": 0.272894
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Dec 31 12:59:00 AM",
+        "Coefficient": -0.260386
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Feb 03 12:59:00 AM",
+        "Coefficient": -0.040921
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Feb 08 12:59:00 AM",
+        "Coefficient": 0.051401
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Feb 13 06:59:00 PM",
+        "Coefficient": 0.036841
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Feb 14 06:59:00 PM",
+        "Coefficient": -0.106419
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Feb 14 12:59:00 AM",
+        "Coefficient": 0.219892
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jan 17 06:59:00 PM",
+        "Coefficient": 0.01773
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jan 25 06:59:00 PM",
+        "Coefficient": -0.22607
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jan 30 06:59:00 PM",
+        "Coefficient": 0.096994
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jul 06 11:59:00 PM",
+        "Coefficient": 0.006249
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jul 15 11:59:00 PM",
+        "Coefficient": -0.18629
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jul 16 06:59:00 PM",
+        "Coefficient": 0.16938
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jul 27 06:59:00 PM",
+        "Coefficient": 0.011039
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jul 29 11:59:00 PM",
+        "Coefficient": 0.004654
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jun 03 06:59:00 PM",
+        "Coefficient": -0.138812
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Jun 10 06:59:00 PM",
+        "Coefficient": 0.04556
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 07 12:59:00 AM",
+        "Coefficient": 0.122114
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 08 06:59:00 PM",
+        "Coefficient": 0.024998
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 15 01:24:46 PM",
+        "Coefficient": 0.027295
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 20 11:59:00 PM",
+        "Coefficient": 0.322853
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 21 06:59:00 PM",
+        "Coefficient": -0.085946
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 22 11:59:00 PM",
+        "Coefficient": 0.023499
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 26 06:59:00 PM",
+        "Coefficient": 0.161737
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Mar 27 06:59:00 PM",
+        "Coefficient": 0.08005
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 03 11:59:00 PM",
+        "Coefficient": -0.050765
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 06 11:59:00 PM",
+        "Coefficient": 0.030328
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 07 11:59:00 PM",
+        "Coefficient": 0.475153
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 14 06:59:00 PM",
+        "Coefficient": 0.022314
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 28 11:59:00 PM",
+        "Coefficient": 0.082076
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 30 01:17:21 PM",
+        "Coefficient": 0.113296
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 30 11:59:00 PM",
+        "Coefficient": 0.260088
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 May 31 11:59:00 PM",
+        "Coefficient": 0.019029
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Nov 01 11:59:00 PM",
+        "Coefficient": 0.051025
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Nov 13 12:59:00 AM",
+        "Coefficient": -0.109404
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Nov 15 06:59:00 PM",
+        "Coefficient": 0.003609
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Nov 19 12:59:00 AM",
+        "Coefficient": -0.107964
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Nov 22 06:59:00 PM",
+        "Coefficient": 0.018839
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Oct 17 11:59:00 PM",
+        "Coefficient": -0.087827
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Sep 10 11:59:00 PM",
+        "Coefficient": 0.002345
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Sep 11 11:59:00 PM",
+        "Coefficient": 0.156638
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Sep 16 11:59:00 PM",
+        "Coefficient": 0.177714
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Sep 18 11:59:00 PM",
+        "Coefficient": 0.007495
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Sep 20 11:59:00 PM",
+        "Coefficient": -0.086021
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2024 Sep 27 06:59:00 PM",
+        "Coefficient": -0.17833
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Apr 11 11:59:00 PM",
+        "Coefficient": -0.036307
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Apr 16 11:59:00 PM",
+        "Coefficient": -0.48779
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Aug 11 11:59:00 PM",
+        "Coefficient": 0.238629
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Aug 12 11:59:00 PM",
+        "Coefficient": 0.058919
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Aug 21 11:59:00 PM",
+        "Coefficient": 0.040373
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Aug 25 06:59:00 PM",
+        "Coefficient": 0.272393
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Aug 28 06:59:00 PM",
+        "Coefficient": 0.009847
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Dec 03 12:59:00 AM",
+        "Coefficient": 0.055048
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Dec 13 12:59:00 AM",
+        "Coefficient": 0.150013
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Dec 25 12:59:00 AM",
+        "Coefficient": 0.008184
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Dec 27 12:59:00 AM",
+        "Coefficient": 0.005699
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Feb 01 12:59:00 AM",
+        "Coefficient": -0.066373
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Feb 04 06:59:00 PM",
+        "Coefficient": 0.031552
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Feb 05 12:59:00 AM",
+        "Coefficient": 0.041123
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Feb 21 12:59:00 AM",
+        "Coefficient": 0.321864
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Feb 25 06:59:00 PM",
+        "Coefficient": -0.149343
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jan 02 06:59:00 PM",
+        "Coefficient": 0.028626
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jan 16 12:59:00 AM",
+        "Coefficient": -0.118633
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jan 25 12:59:00 AM",
+        "Coefficient": -0.220212
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jan 31 12:59:00 AM",
+        "Coefficient": 0.051996
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 08 06:59:00 PM",
+        "Coefficient": 0.006072
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 08 11:59:00 PM",
+        "Coefficient": -0.100445
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 16 06:59:00 PM",
+        "Coefficient": 0.043374
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 17 11:59:00 PM",
+        "Coefficient": 0.069872
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 18 11:59:00 PM",
+        "Coefficient": 0.035793
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 25 11:59:00 PM",
+        "Coefficient": 0.0
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 28 11:59:00 PM",
+        "Coefficient": 0.059189
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 29 06:59:00 PM",
+        "Coefficient": 0.153178
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jul 31 11:59:00 PM",
+        "Coefficient": -0.118837
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Jun 17 11:59:00 PM",
+        "Coefficient": 0.040609
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Mar 01 12:59:00 AM",
+        "Coefficient": 0.078345
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Mar 24 06:59:00 PM",
+        "Coefficient": 0.02602
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 May 15 06:59:00 PM",
+        "Coefficient": 0.091916
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 May 21 11:59:00 PM",
+        "Coefficient": -0.089844
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 May 23 06:59:00 PM",
+        "Coefficient": 0.009744
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Nov 18 12:59:00 AM",
+        "Coefficient": 0.028968
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 03 11:59:00 PM",
+        "Coefficient": 0.174335
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 05 11:59:00 PM",
+        "Coefficient": 0.087238
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 15 11:59:00 PM",
+        "Coefficient": 0.009088
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 16 11:59:00 PM",
+        "Coefficient": 0.01246
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 24 11:59:00 PM",
+        "Coefficient": 0.148925
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 27 11:59:00 PM",
+        "Coefficient": 0.05424
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 29 11:59:00 PM",
+        "Coefficient": 0.016581
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Oct 31 11:59:00 PM",
+        "Coefficient": -0.207146
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Sep 10 06:59:00 PM",
+        "Coefficient": 0.016856
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Sep 16 11:59:00 PM",
+        "Coefficient": 0.067981
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2025 Sep 22 11:59:00 PM",
+        "Coefficient": -0.075784
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Feb 03 12:59:00 AM",
+        "Coefficient": -0.185077
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Feb 19 12:59:00 AM",
+        "Coefficient": 0.084152
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 02 12:59:00 AM",
+        "Coefficient": -0.376332
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 05 06:59:00 PM",
+        "Coefficient": 0.0
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 07 12:59:00 AM",
+        "Coefficient": 0.09847
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 09 12:59:00 AM",
+        "Coefficient": -0.207563
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 12 06:59:00 PM",
+        "Coefficient": 0.0
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 14 12:59:00 AM",
+        "Coefficient": 0.134576
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 15 12:59:00 AM",
+        "Coefficient": -0.161652
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Jan 30 12:59:00 AM",
+        "Coefficient": 0.015611
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 01 12:59:00 AM",
+        "Coefficient": 0.126906
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 06 12:59:00 AM",
+        "Coefficient": 0.044255
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 10 11:59:00 PM",
+        "Coefficient": -0.246229
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 12 11:59:00 PM",
+        "Coefficient": -0.353657
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 18 11:59:00 PM",
+        "Coefficient": 0.08707
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 19 11:59:00 PM",
+        "Coefficient": 0.071407
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 Mar 20 11:59:00 PM",
+        "Coefficient": -0.162479
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_2026 May 20 11:59:00 PM",
+        "Coefficient": 0.388617
+      },
+      {
+        "Method": "ElasticNet",
+        "Feature": "Overall Service Request Due Date_nan",
+        "Coefficient": -0.323433
+      }
+    ]
+  },
+  "artifacts": {
+    "model_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\models\\best_model.joblib",
+    "encoders_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\models\\encoders.joblib",
+    "results_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\models\\latest_results.json"
+  },
+  "last_trained_case": {
+    "service_request_type": "Alley/Sidewalk/Street Repair - Hazardous - TPW",
+    "department": "Public Works",
+    "department_grouped": "Other",
+    "priority": "Dispatch",
+    "method_received_description": "Phone",
+    "city_council_district": "9",
+    "created_date": "2026-03-18T13:28:24",
+    "overall_due_date": "2026 Mar 19 11:59:00 PM",
+    "days_to_close_hours": 7.9,
+    "target_class": 1,
+    "ert_days": 1.0,
+    "month": 3,
+    "day_of_week": 2,
+    "hour": 13
+  },
+  "feature_importance": [
+    {
+      "name": "ERT_days",
+      "score": 0.11661092897488363
+    },
+    {
+      "name": "Priority",
+      "score": 0.09207684773223747
+    },
+    {
+      "name": "Department_Code Compliance",
+      "score": 0.06921576427343337
+    },
+    {
+      "name": "Service Request Type_Parking - Report a Violation - TRN",
+      "score": 0.06454184013825495
+    },
+    {
+      "name": "Service Request Type_Code Concern - CCS",
+      "score": 0.056057945102438764
+    },
+    {
+      "name": "day_of_week",
+      "score": 0.05238563002998527
+    },
+    {
+      "name": "Overall Service Request Due Date_nan",
+      "score": 0.04557752458562049
+    },
+    {
+      "name": "month",
+      "score": 0.043670776059883495
+    },
+    {
+      "name": "Department_grouped",
+      "score": 0.04197760026645963
+    },
+    {
+      "name": "hour",
+      "score": 0.03693316166008563
+    }
+  ],
+  "data_shape": [
+    500,
+    15
+  ],
+  "train_test": [
+    397,
+    100
+  ]
+}

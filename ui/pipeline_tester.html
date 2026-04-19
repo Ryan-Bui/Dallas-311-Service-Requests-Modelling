@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline Test Window</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #08101f;
+      --surface: rgba(10, 18, 34, 0.92);
+      --card: #111d35;
+      --card-hover: #162746;
+      --border: #223968;
+      --primary: #2563eb;
+      --primary-light: #60a5fa;
+      --accent: #f59e0b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --radius: 18px;
+      --radius-sm: 10px;
+      --shadow: 0 28px 60px rgba(0, 0, 0, 0.34);
+      --font-heading: "Fira Code", monospace;
+      --font-body: "Fira Sans", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      font-family: var(--font-body);
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.18), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.12), transparent 26%),
+        linear-gradient(150deg, #040914 0%, #091120 50%, #0b1527 100%);
+    }
+
+    .page {
+      width: min(100%, 900px);
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero,
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .eyebrow {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--primary-light);
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-heading);
+      font-size: clamp(24px, 4vw, 32px);
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      max-width: 58ch;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .hero-actions,
+    .panel-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .panel {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .section-head h2 {
+      font-family: var(--font-heading);
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .section-head p {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-family: var(--font-heading);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--text-secondary);
+      background: rgba(15, 23, 42, 0.75);
+    }
+
+    .pill::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .pill.running { color: var(--primary-light); border-color: rgba(96, 165, 250, 0.45); background: rgba(37, 99, 235, 0.18); }
+    .pill.done { color: var(--success); border-color: rgba(16, 185, 129, 0.38); background: rgba(16, 185, 129, 0.13); }
+    .pill.error { color: var(--danger); border-color: rgba(239, 68, 68, 0.38); background: rgba(239, 68, 68, 0.13); }
+    .pill.warning { color: var(--accent); border-color: rgba(245, 158, 11, 0.38); background: rgba(245, 158, 11, 0.12); }
+
+    .btn {
+      min-height: 42px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+    .btn-primary {
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-secondary {
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.75);
+      border-color: var(--border);
+    }
+
+    .dataset-list {
+      display: grid;
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .data-option {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: grid;
+      gap: 7px;
+      cursor: pointer;
+      transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .data-option:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary-light);
+      background: var(--card-hover);
+    }
+
+    .data-option.selected {
+      border-color: var(--primary-light);
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.18), transparent 72%),
+        var(--card-hover);
+      box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+    }
+
+    .data-option--empty { cursor: default; }
+
+    .data-row {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .data-title {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .data-meta {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-family: var(--font-heading);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(245, 158, 11, 0.13);
+      border: 1px solid rgba(245, 158, 11, 0.22);
+    }
+
+    .data-meta.recommended {
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.22);
+    }
+
+    .data-path {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .upload-area {
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      border: 1px dashed rgba(96, 165, 250, 0.42);
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.12), transparent 74%),
+        rgba(15, 23, 42, 0.68);
+      cursor: pointer;
+      display: grid;
+      gap: 10px;
+      transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+    }
+
+    .upload-area:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary-light);
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.16), transparent 74%),
+        rgba(15, 23, 42, 0.74);
+    }
+
+    .upload-area strong {
+      font-family: var(--font-heading);
+      font-size: 13px;
+    }
+
+    .upload-area span {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .upload-status {
+      min-height: 18px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      transition: width 180ms ease;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-card {
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: rgba(12, 20, 37, 0.82);
+      display: grid;
+      gap: 8px;
+    }
+
+    .summary-card span {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .summary-card strong {
+      font-family: var(--font-heading);
+      font-size: 15px;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .publish-bar {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      background: rgba(10, 18, 34, 0.72);
+    }
+
+    .publish-status {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+      flex: 1 1 280px;
+    }
+
+    .log-console {
+      min-height: 220px;
+      max-height: 320px;
+      overflow-y: auto;
+      background: #040915;
+      border: 1px solid rgba(96, 165, 250, 0.16);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      color: #bae6fd;
+      font-family: var(--font-heading);
+      font-size: 11px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .log-empty { color: var(--text-muted); }
+
+    @media (max-width: 760px) {
+      .page { padding: 18px; }
+      .hero, .section-head { flex-direction: column; }
+      .hero-actions, .panel-actions { justify-content: stretch; width: 100%; }
+      .hero-actions .btn, .panel-actions .btn { flex: 1 1 0; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .publish-bar .btn { width: 100%; }
+    }
+
+    @media (max-width: 520px) {
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Pipeline Test Flow</div>
+        <h1>New File Analysis Pipeline</h1>
+        <p>Pick a CSV, upload a new file, and test a pipeline run in a dedicated dashboard tester window or tab.</p>
+      </div>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-secondary" id="btn-refresh-sources">Refresh Sources</button>
+        <button type="button" class="btn btn-secondary" id="btn-close-window">Close Window</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>Dataset Selection</h2>
+          <p id="selected-file-label">Choose a CSV from the project or upload a new one.</p>
+        </div>
+        <span class="pill" id="selection-pill">Awaiting Selection</span>
+      </div>
+
+      <div class="dataset-list" id="server-data-options">
+        <div class="data-option data-option--empty">
+          <div class="data-row">
+            <span class="data-title">Loading available datasets...</span>
+          </div>
+          <span class="data-path">Checking the project root and uploaded files.</span>
+        </div>
+      </div>
+
+      <div class="upload-area" id="upload-trigger" role="button" tabindex="0" aria-label="Upload CSV for pipeline test">
+        <strong>Upload a new CSV</strong>
+        <span>Click here to browse for a local file and add it to the testing flow.</span>
+      </div>
+      <input type="file" id="file-input" accept=".csv" hidden />
+      <div class="upload-status" id="upload-status">Ready for a new file.</div>
+
+      <div class="panel-actions">
+        <button type="button" class="btn btn-primary" id="btn-run-test">Run Test Pipeline</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>Run Status</h2>
+          <p id="run-caption">No test run has started yet.</p>
+        </div>
+        <span class="pill" id="status-pill">Idle</span>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span>Dataset</span>
+          <strong id="summary-dataset">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Progress</span>
+          <strong id="summary-progress">0%</strong>
+        </div>
+        <div class="summary-card">
+          <span>Best Model</span>
+          <strong id="summary-model">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>ROC-AUC</span>
+          <strong id="summary-auc">-</strong>
+        </div>
+      </div>
+
+      <div class="publish-bar">
+        <div class="publish-status" id="publish-status">Complete a pipeline run to save the trained model and refresh the main dashboard.</div>
+        <button type="button" class="btn btn-primary" id="btn-save-dashboard" disabled>Save Model &amp; Show Dashboard</button>
+      </div>
+
+      <div class="log-console" id="log-console" role="log" aria-live="polite"><span class="log-empty">Run logs will appear here.</span></div>
+    </section>
+  </div>
+
+  <script>
+    const BASE_URL = '';
+    const queryParams = new URLSearchParams(window.location.search);
+    const initialDataPath = queryParams.get('data_path') || '';
+    const launchMode = queryParams.get('launch') === 'same-tab' ? 'same-tab' : 'popup';
+    const returnTo = queryParams.get('return_to') || '';
+    const openerOrigin = window.location.origin;
+    const DASHBOARD_BOOTSTRAP_STORAGE_KEY = 'dashboard-bootstrap-cache';
+
+    let currentDataPath = initialDataPath;
+    let knownLogs = 0;
+    let pollTimer = null;
+
+    const serverDataOptions = document.getElementById('server-data-options');
+    const uploadTrigger = document.getElementById('upload-trigger');
+    const fileInput = document.getElementById('file-input');
+    const uploadStatus = document.getElementById('upload-status');
+    const selectedFileLabel = document.getElementById('selected-file-label');
+    const selectionPill = document.getElementById('selection-pill');
+    const runCaption = document.getElementById('run-caption');
+    const statusPill = document.getElementById('status-pill');
+    const progressBar = document.getElementById('progress-bar');
+    const summaryDataset = document.getElementById('summary-dataset');
+    const summaryProgress = document.getElementById('summary-progress');
+    const summaryModel = document.getElementById('summary-model');
+    const summaryAuc = document.getElementById('summary-auc');
+    const logConsole = document.getElementById('log-console');
+    const publishStatus = document.getElementById('publish-status');
+    const refreshButton = document.getElementById('btn-refresh-sources');
+    const closeButton = document.getElementById('btn-close-window');
+    const runButton = document.getElementById('btn-run-test');
+    const saveDashboardButton = document.getElementById('btn-save-dashboard');
+    let latestResults = null;
+
+    function hasLiveOpener() {
+      return Boolean(window.opener) && !window.opener.closed;
+    }
+
+    function fileName(path) {
+      if (!path) return '';
+      const parts = path.split(/[\\/]/);
+      return parts[parts.length - 1] || path;
+    }
+
+    function stashDashboardBootstrap(results, status = 'done') {
+      if (!results) return;
+
+      const payload = JSON.stringify({
+        status,
+        data_path: results.data_path || currentDataPath,
+        finished_at: results.finished_at || null,
+        results,
+      });
+
+      try {
+        if (launchMode !== 'same-tab' && hasLiveOpener()) {
+          window.opener.sessionStorage.setItem(DASHBOARD_BOOTSTRAP_STORAGE_KEY, payload);
+        } else {
+          window.sessionStorage.setItem(DASHBOARD_BOOTSTRAP_STORAGE_KEY, payload);
+        }
+      } catch (_) {
+        // Ignore session storage failures and fall back to the server bootstrap.
+      }
+    }
+
+    function resolveDashboardTarget(preferredTarget = '') {
+      const candidates = [preferredTarget, returnTo];
+
+      for (const candidateTarget of candidates) {
+        if (!candidateTarget) continue;
+        try {
+          const candidate = new URL(candidateTarget, window.location.origin);
+          if (candidate.origin === window.location.origin) {
+            return candidate.toString();
+          }
+        } catch (_) {
+          // Ignore unsafe dashboard targets.
+        }
+      }
+
+      return new URL('/', window.location.origin).toString();
+    }
+
+    function navigateToDashboard(preferredTarget = '') {
+      const safeReturnTarget = resolveDashboardTarget(preferredTarget);
+
+      if (preferredTarget || returnTo) {
+        window.location.assign(safeReturnTarget);
+        return;
+      }
+
+      const fallbackUrl = safeReturnTarget;
+      const initialHref = window.location.href;
+
+      if (window.history.length > 1) {
+        window.history.back();
+        window.setTimeout(() => {
+          if (window.location.href === initialHref) {
+            window.location.assign(fallbackUrl);
+          }
+        }, 250);
+        return;
+      }
+
+      window.location.assign(fallbackUrl);
+    }
+
+    function openSavedDashboard(preferredTarget = '') {
+      const dashboardTarget = resolveDashboardTarget(preferredTarget);
+
+      if (launchMode !== 'same-tab' && hasLiveOpener()) {
+        try {
+          window.opener.location.assign(dashboardTarget);
+          window.opener.focus();
+          window.close();
+          window.setTimeout(() => {
+            if (!window.closed) {
+              window.location.assign(dashboardTarget);
+            }
+          }, 150);
+          return;
+        } catch (_) {
+          // Fall back to same-window navigation below.
+        }
+      }
+
+      navigateToDashboard(dashboardTarget);
+    }
+
+    function configureLaunchModeUI() {
+      if (launchMode === 'same-tab' || !hasLiveOpener()) {
+        closeButton.textContent = 'Back to Dashboard';
+        closeButton.setAttribute('aria-label', 'Back to Dashboard');
+        return;
+      }
+
+      closeButton.textContent = 'Close Window';
+      closeButton.setAttribute('aria-label', 'Close Window');
+    }
+
+    function postToOpener(type, payload = {}) {
+      if (!hasLiveOpener()) return;
+
+      try {
+        window.opener.postMessage({ source: 'pipeline-popup', type, ...payload }, openerOrigin);
+      } catch (_) {
+        // Ignore cross-window notification errors.
+      }
+    }
+
+    function setPill(element, state, label) {
+      element.className = state ? `pill ${state}` : 'pill';
+      element.textContent = label;
+    }
+
+    function setUploadStatus(message, tone = 'default') {
+      uploadStatus.textContent = message;
+      uploadStatus.style.color =
+        tone === 'success' ? 'var(--success)'
+        : tone === 'error' ? 'var(--danger)'
+        : tone === 'warning' ? 'var(--accent)'
+        : 'var(--text-secondary)';
+    }
+
+    function setPublishStatus(message, tone = 'default') {
+      publishStatus.textContent = message;
+      publishStatus.style.color =
+        tone === 'success' ? 'var(--success)'
+        : tone === 'error' ? 'var(--danger)'
+        : tone === 'warning' ? 'var(--accent)'
+        : 'var(--text-secondary)';
+    }
+
+    function setSaveDashboardEnabled(isEnabled, label = 'Save Model & Show Dashboard') {
+      saveDashboardButton.disabled = !isEnabled;
+      saveDashboardButton.textContent = label;
+    }
+
+    function setRunState(status, progress, caption) {
+      const normalized = ['running', 'done', 'error'].includes(status) ? status : '';
+      const label = status === 'running' ? 'Running' : status === 'done' ? 'Done' : status === 'error' ? 'Error' : 'Idle';
+      setPill(statusPill, normalized, label);
+      progressBar.style.width = `${Math.max(0, Math.min(progress || 0, 100))}%`;
+      summaryProgress.textContent = `${Math.max(0, Math.min(progress || 0, 100))}%`;
+      runCaption.textContent = caption;
+      runButton.disabled = status === 'running';
+      runButton.textContent = status === 'running' ? 'Pipeline Running...' : 'Run Test Pipeline';
+
+      if (status === 'running') {
+        latestResults = null;
+        setSaveDashboardEnabled(false);
+        setPublishStatus('Pipeline is training a new model. Save will unlock when the run finishes.', 'warning');
+      } else if (status === 'error') {
+        latestResults = null;
+        setSaveDashboardEnabled(false);
+        setPublishStatus('Fix the pipeline error before saving a new dashboard snapshot.', 'error');
+      } else if (status !== 'done' && !latestResults) {
+        setSaveDashboardEnabled(false);
+        setPublishStatus('Complete a pipeline run to save the trained model and refresh the main dashboard.');
+      }
+    }
+
+    function resetLogs() {
+      knownLogs = 0;
+      logConsole.innerHTML = '<span class="log-empty">Run logs will appear here.</span>';
+    }
+
+    function appendLog(entry) {
+      if (!entry) return;
+      if (logConsole.querySelector('.log-empty')) logConsole.innerHTML = '';
+      const line = document.createElement('div');
+      line.textContent = `[${entry.t || '--:--:--'}] ${entry.tag || 'INFO'}  ${entry.msg || ''}`;
+      logConsole.appendChild(line);
+      logConsole.scrollTop = logConsole.scrollHeight;
+    }
+
+    function renderEmptyDatasetState(title, detail) {
+      serverDataOptions.innerHTML = '';
+      const emptyCard = document.createElement('div');
+      emptyCard.className = 'data-option data-option--empty';
+      emptyCard.innerHTML = `
+        <div class="data-row">
+          <span class="data-title">${title}</span>
+        </div>
+        <span class="data-path">${detail}</span>
+      `;
+      serverDataOptions.appendChild(emptyCard);
+    }
+
+    function renderDatasetOptions(datasets, selectedPath = '') {
+      serverDataOptions.innerHTML = '';
+
+      if (!datasets.length) {
+        renderEmptyDatasetState('No CSV files found yet.', 'Upload one below or add a CSV to the project root.');
+        return;
+      }
+
+      datasets.forEach(dataset => {
+        const option = document.createElement('div');
+        option.className = 'data-option';
+        option.dataset.path = dataset.path || '';
+
+        const metaPieces = [`<span class="data-meta">${dataset.source || 'CSV'}</span>`];
+        if (dataset.is_recommended) {
+          metaPieces.push('<span class="data-meta recommended">Recommended</span>');
+        }
+
+        option.innerHTML = `
+          <div class="data-row">
+            <span class="data-title">${dataset.filename || 'Dataset'}</span>
+            <div class="data-row">${metaPieces.join('')}</div>
+          </div>
+          <span class="data-path">${dataset.path || ''}</span>
+        `;
+
+        if (selectedPath && dataset.path === selectedPath) option.classList.add('selected');
+        serverDataOptions.appendChild(option);
+      });
+    }
+
+    function selectData(path, selectedElement = null, notifyParent = true) {
+      if (!path) return;
+      currentDataPath = path;
+      const name = fileName(path);
+      selectedFileLabel.textContent = `Selected file: ${name}`;
+      summaryDataset.textContent = name;
+      setPill(selectionPill, 'done', 'Ready');
+      serverDataOptions.querySelectorAll('.data-option').forEach(option => option.classList.remove('selected'));
+      const option = selectedElement || Array.from(serverDataOptions.querySelectorAll('.data-option')).find(item => item.dataset.path === path);
+      if (option) option.classList.add('selected');
+      setUploadStatus(`Ready to test ${name}.`, 'success');
+      if (notifyParent) postToOpener('dataset-selected', { dataPath: path });
+    }
+
+    function renderResults(results) {
+      if (!results) return;
+      latestResults = results;
+      summaryModel.textContent = results.best_model || '-';
+      summaryAuc.textContent = typeof results.regularization?.best_roc_auc === 'number'
+        ? results.regularization.best_roc_auc.toFixed(4)
+        : '-';
+      if (results.data_path) summaryDataset.textContent = fileName(results.data_path);
+      setSaveDashboardEnabled(true);
+      setPublishStatus('This trained run is ready to save to the main dashboard.', 'success');
+    }
+
+    async function fetchConfig() {
+      try {
+        const response = await fetch(BASE_URL + '/api/config');
+        if (!response.ok) {
+          renderEmptyDatasetState('Unable to load datasets.', 'The tester could not reach /api/config.');
+          setPill(selectionPill, 'warning', 'Unavailable');
+          return null;
+        }
+
+        const config = await response.json();
+        const datasets = Array.isArray(config.available_datasets) ? config.available_datasets : [];
+        const preferredPath = datasets.some(dataset => dataset.path === currentDataPath)
+          ? currentDataPath
+          : (config.recommended_data_path || datasets[0]?.path || '');
+
+        renderDatasetOptions(datasets, preferredPath);
+        if (preferredPath) {
+          selectData(preferredPath, null, false);
+        } else {
+          setPill(selectionPill, 'warning', 'No Data');
+        }
+        return config;
+      } catch (error) {
+        console.error('Tester config fetch failed', error);
+        renderEmptyDatasetState('Unable to load datasets.', 'Check the Flask app and refresh this tester page.');
+        setPill(selectionPill, 'error', 'Offline');
+        return null;
+      }
+    }
+
+    async function fetchResults() {
+      try {
+        const response = await fetch(BASE_URL + '/api/results');
+        if (!response.ok) return;
+        const results = await response.json();
+        renderResults(results);
+        postToOpener('pipeline-results', { dataPath: results.data_path || currentDataPath, status: 'done' });
+      } catch (_) {
+        // Ignore optional result fetch errors.
+      }
+    }
+
+    function updateFromStatus(data) {
+      const status = data?.status || 'idle';
+      const progress = data?.progress || 0;
+      const activePath = data?.data_path || currentDataPath;
+
+      if (activePath) summaryDataset.textContent = fileName(activePath);
+
+      const caption = status === 'running'
+        ? 'Pipeline agents are processing the selected file.'
+        : status === 'done'
+        ? 'Pipeline test completed successfully.'
+        : status === 'error'
+        ? (data?.error || 'The test run returned an error.')
+        : 'Waiting for a test run.';
+
+      setRunState(status, progress, caption);
+
+      const entries = Array.isArray(data?.logs) ? data.logs : [];
+      entries.slice(knownLogs).forEach(appendLog);
+      knownLogs = entries.length;
+
+      if (status === 'error') {
+        latestResults = null;
+        summaryModel.textContent = '-';
+        summaryAuc.textContent = '-';
+      }
+    }
+
+    async function pollStatus() {
+      try {
+        const response = await fetch(BASE_URL + '/api/status');
+        if (!response.ok) return;
+        const data = await response.json();
+        updateFromStatus(data);
+
+        if (data.status === 'running') {
+          pollTimer = window.setTimeout(pollStatus, 1500);
+          return;
+        }
+
+        window.clearTimeout(pollTimer);
+
+        if (data.status === 'done') {
+          await fetchResults();
+          postToOpener('pipeline-finished', { dataPath: data.data_path || currentDataPath, status: 'done' });
+        } else if (data.status === 'error') {
+          postToOpener('pipeline-finished', { dataPath: data.data_path || currentDataPath, status: 'error' });
+        }
+      } catch (_) {
+        window.clearTimeout(pollTimer);
+        setRunState('error', 0, 'Unable to reach the Flask server from the tester.');
+      }
+    }
+
+    async function hydrateExistingRun() {
+      try {
+        const response = await fetch(BASE_URL + '/api/status');
+        if (!response.ok) return;
+        const data = await response.json();
+        updateFromStatus(data);
+        if (!currentDataPath && data.data_path) currentDataPath = data.data_path;
+        if (data.status === 'running') {
+          pollTimer = window.setTimeout(pollStatus, 1500);
+        } else if (data.status === 'done') {
+          await fetchResults();
+        }
+      } catch (_) {
+        setRunState('idle', 0, 'Open the Flask dashboard server to test the pipeline.');
+      }
+    }
+
+    async function runPipeline() {
+      if (!currentDataPath) {
+        setUploadStatus('Choose or upload a CSV before running the test pipeline.', 'error');
+        setPill(selectionPill, 'warning', 'Needs Input');
+        return;
+      }
+
+      resetLogs();
+      summaryModel.textContent = '-';
+      summaryAuc.textContent = '-';
+      setRunState('running', 0, 'Submitting the selected file to the pipeline...');
+      postToOpener('dataset-selected', { dataPath: currentDataPath });
+
+      try {
+        const response = await fetch(BASE_URL + '/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data_path: currentDataPath }),
+        });
+
+        const data = await response.json();
+
+        if (response.status === 409) {
+          setUploadStatus('A pipeline is already running. Showing live status here.', 'warning');
+          postToOpener('pipeline-started', { dataPath: currentDataPath, status: 'running' });
+          pollTimer = window.setTimeout(pollStatus, 600);
+          return;
+        }
+
+        if (!response.ok) throw new Error(data.error || 'Pipeline run failed.');
+
+        const resolvedPath = data.data_path || currentDataPath;
+        selectData(resolvedPath, null, false);
+        setUploadStatus(`Pipeline accepted ${fileName(resolvedPath)}.`, 'success');
+        appendLog({
+          t: new Date().toLocaleTimeString('en-US', { hour12: false }),
+          tag: 'INFO',
+          msg: 'Pipeline execution accepted by the Flask app.',
+        });
+        postToOpener('pipeline-started', { dataPath: resolvedPath, status: 'running' });
+        pollTimer = window.setTimeout(pollStatus, 600);
+      } catch (error) {
+        setRunState('error', 0, error.message || 'Pipeline run failed.');
+        setUploadStatus(error.message || 'Pipeline run failed.', 'error');
+        postToOpener('pipeline-finished', { dataPath: currentDataPath, status: 'error' });
+      }
+    }
+
+    async function saveDashboard() {
+      setSaveDashboardEnabled(false, 'Saving Dashboard...');
+      setPublishStatus('Saving the latest model and dashboard snapshot...', 'warning');
+
+      try {
+        const response = await fetch(BASE_URL + '/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data_path: currentDataPath }),
+          cache: 'no-store',
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to save the dashboard snapshot.');
+
+        if (data.results) {
+          stashDashboardBootstrap(data.results);
+          renderResults(data.results);
+        }
+
+        postToOpener('pipeline-saved', {
+          dataPath: data.results?.data_path || currentDataPath,
+          status: 'done',
+          results: data.results || null,
+          dashboardUrl: data.dashboard_url || '/',
+        });
+
+        postToOpener('pipeline-results', {
+          dataPath: data.results?.data_path || currentDataPath,
+          status: 'done',
+        });
+        postToOpener('pipeline-finished', {
+          dataPath: data.results?.data_path || currentDataPath,
+          status: 'done',
+        });
+
+        setPublishStatus(data.message || 'Saved. Opening the main dashboard...', 'success');
+        openSavedDashboard(data.dashboard_url || '/');
+      } catch (error) {
+        setSaveDashboardEnabled(Boolean(latestResults));
+        setPublishStatus(error.message || 'Unable to save the dashboard snapshot.', 'error');
+      }
+    }
+
+    serverDataOptions.addEventListener('click', event => {
+      const option = event.target.closest('.data-option[data-path]');
+      if (!option) return;
+      selectData(option.dataset.path, option);
+    });
+
+    uploadTrigger.addEventListener('click', () => fileInput.click());
+    uploadTrigger.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', async function() {
+      if (!this.files.length) return;
+      const file = this.files[0];
+      setUploadStatus(`Uploading ${file.name}...`);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch(BASE_URL + '/api/upload', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Upload failed.');
+        currentDataPath = data.path;
+        await fetchConfig();
+        selectData(data.path);
+        setUploadStatus(`Uploaded ${data.filename}. Ready to test.`, 'success');
+      } catch (error) {
+        setUploadStatus(error.message || 'Upload failed.', 'error');
+      } finally {
+        this.value = '';
+      }
+    });
+
+    refreshButton.addEventListener('click', async () => {
+      refreshButton.disabled = true;
+      await fetchConfig();
+      await hydrateExistingRun();
+      refreshButton.disabled = false;
+    });
+
+    closeButton.addEventListener('click', () => {
+      if (launchMode === 'same-tab' || !hasLiveOpener()) {
+        navigateToDashboard();
+        return;
+      }
+
+      window.close();
+      window.setTimeout(() => {
+        if (!window.closed) {
+          navigateToDashboard();
+        }
+      }, 150);
+    });
+    runButton.addEventListener('click', runPipeline);
+    saveDashboardButton.addEventListener('click', saveDashboard);
+
+    window.addEventListener('beforeunload', () => {
+      window.clearTimeout(pollTimer);
+    });
+
+    (async () => {
+      configureLaunchModeUI();
+      await fetchConfig();
+      await hydrateExistingRun();
+    })();
+  </script>
+</body>
+</html>

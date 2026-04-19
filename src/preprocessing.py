@@ -1,0 +1,143 @@
+# ============================================
+# 4. Preprocessing / Encoding
+# ============================================
+
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+
+from . import config
+
+
+def drop_leakage_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop columns that would cause data leakage."""
+    df = df.drop(
+        columns=[col for col in config.LEAKAGE_COLUMNS if col in df.columns],
+        errors='ignore',
+    )
+    print("\nShape after dropping leakage columns:", df.shape)
+    return df
+
+
+def handle_service_request_type(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    top_n: int | None = None,
+):
+    """Keep only the top *top_n* service-request types (fitted on train); collapse rest to 'Other'."""
+    if top_n is None:
+        top_n = config.TOP_SERVICE_REQUEST_TYPES
+
+    if 'Service Request Type' in X_train.columns:
+        top_types = X_train['Service Request Type'].value_counts().nlargest(top_n).index
+        
+        X_train['Service Request Type'] = X_train['Service Request Type'].where(
+            X_train['Service Request Type'].isin(top_types),
+            'Other',
+        )
+        
+        X_test['Service Request Type'] = X_test['Service Request Type'].where(
+            X_test['Service Request Type'].isin(top_types),
+            'Other',
+        )
+    return X_train, X_test
+
+
+def clean_ert(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract numeric ERT days from the text column."""
+    if 'ERT (Estimated Response Time)' in df.columns:
+        df['ERT_days'] = (
+            df['ERT (Estimated Response Time)']
+            .astype(str)
+            .str.extract(r'(\d+)')[0]
+        )
+        df['ERT_days'] = pd.to_numeric(df['ERT_days'], errors='coerce')
+        df = df.drop(columns=['ERT (Estimated Response Time)'], errors='ignore')
+    return df
+
+
+def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame):
+    """Ordinal-encode selected columns and one-hot-encode the rest, fitted on train."""
+    encoders = {}
+    
+    # Ordinal encoding (replacing LabelEncoder to handle 2D inputs properly)
+    for col in config.LABEL_ENCODE_COLUMNS:
+        if col in X_train.columns:
+            oe = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+            X_train[col] = oe.fit_transform(X_train[[col]])
+            X_test[col] = oe.transform(X_test[[col]])
+            encoders[col] = oe
+
+    # One-hot encoding for remaining object columns
+    object_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
+    if len(object_cols) > 0:
+        ohe = OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore')
+        
+        # Fit on train, transform train
+        train_encoded = ohe.fit_transform(X_train[object_cols])
+        feature_names = ohe.get_feature_names_out(object_cols)
+        
+        train_encoded_df = pd.DataFrame(train_encoded, columns=feature_names, index=X_train.index)
+        X_train = pd.concat([X_train.drop(columns=object_cols), train_encoded_df], axis=1)
+        
+        # Transform test
+        test_encoded = ohe.transform(X_test[object_cols])
+        test_encoded_df = pd.DataFrame(test_encoded, columns=feature_names, index=X_test.index)
+        X_test = pd.concat([X_test.drop(columns=object_cols), test_encoded_df], axis=1)
+        
+        encoders['ohe'] = ohe
+
+    print("\nTrain shape after encoding:", X_train.shape)
+    print("Test shape after encoding:", X_test.shape)
+    return X_train, X_test, encoders
+
+
+def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame):
+    """Fill numeric NaNs with the train median; cast bools to int."""
+    numeric_cols = [col for col in X_train.columns if X_train[col].dtype in ['int64', 'float64']]
+    
+    if len(numeric_cols) > 0:
+        imputer = SimpleImputer(strategy='median')
+        X_train[numeric_cols] = imputer.fit_transform(X_train[numeric_cols])
+        X_test[numeric_cols] = imputer.transform(X_test[numeric_cols])
+
+    bool_cols_train = X_train.select_dtypes(include=['bool']).columns
+    X_train[bool_cols_train] = X_train[bool_cols_train].astype(int)
+
+    bool_cols_test = X_test.select_dtypes(include=['bool']).columns
+    X_test[bool_cols_test] = X_test[bool_cols_test].astype(int)
+
+    print("\nTotal missing values in train after cleaning:", X_train.isnull().sum().sum())
+    return X_train, X_test
+
+
+def split_features_target(df: pd.DataFrame):
+    """Return X, y after dropping the target and days_to_close columns."""
+    X = df.drop(columns=['target', 'days_to_close'])
+    
+    # Drop raw datetime/timedelta columns if they still exist (they break numpy-based models)
+    X = X.select_dtypes(exclude=['datetime64', 'timedelta64'])
+    
+    y = df['target']
+    print("\nX shape after safety drop:", X.shape)
+    print("y shape:", y.shape)
+    return X, y
+
+
+def split_train_test(X, y, test_size=None, random_state=None):
+    """Stratified train-test split."""
+    if test_size is None:
+        test_size = config.TEST_SIZE
+    if random_state is None:
+        random_state = config.RANDOM_STATE
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y,
+    )
+    print("\nTrain size:", X_train.shape, y_train.shape)
+    print("Test size:", X_test.shape, y_test.shape)
+    return X_train, X_test, y_train, y_test

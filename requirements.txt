@@ -10,3 +10,7 @@ langchain-openai
 python-dotenv
 pytest
 pip-tools
+flask
+flask-cors
+xgboost
+matplotlib

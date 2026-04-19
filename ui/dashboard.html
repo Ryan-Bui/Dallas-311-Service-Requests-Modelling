@@ -1,0 +1,3842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dallas 311 — ML Pipeline Dashboard</title>
+  <meta name="description" content="Real-time analytics dashboard for the Dallas 311 Service Requests Machine Learning Pipeline. Monitor model performance, agent status, and regularization results." />
+
+  <!-- Fonts: Fira Code + Fira Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    /* ── DARK (default) ── */
+    :root,
+    [data-theme="dark"] {
+      --bg-base:        #080D1A;
+      --bg-surface:     #0D1526;
+      --bg-card:        #111D35;
+      --bg-card-hover:  #162240;
+      --border:         #1E3060;
+      --border-bright:  #2A4A8A;
+
+      --primary:        #1E40AF;
+      --primary-light:  #3B82F6;
+      --primary-glow:   rgba(59,130,246,0.15);
+      --accent:         #F59E0B;
+      --accent-dim:     rgba(245,158,11,0.12);
+
+      --success:        #10B981;
+      --warning:        #F59E0B;
+      --danger:         #EF4444;
+      --info:           #3B82F6;
+
+      --text-primary:   #E2E8F0;
+      --text-secondary: #94A3B8;
+      --text-muted:     #4B6A9A;
+      --text-code:      #7DD3FC;
+
+      --chart-grid:     rgba(30,48,96,0.6);
+      --chart-text:     #94A3B8;
+      --log-bg:         #050B18;
+
+      --font-heading:   'Fira Code', monospace;
+      --font-body:      'Fira Sans', sans-serif;
+      --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+      --transition: 150ms ease; --transition-med: 250ms ease;
+    }
+
+    /* ── DIM ── */
+    [data-theme="dim"] {
+      --bg-base:        #1A1F2E;
+      --bg-surface:     #21273A;
+      --bg-card:        #262D42;
+      --bg-card-hover:  #2D3550;
+      --border:         #343D58;
+      --border-bright:  #4A5680;
+
+      --primary:        #2563EB;
+      --primary-light:  #60A5FA;
+      --primary-glow:   rgba(96,165,250,0.14);
+      --accent:         #FBBF24;
+      --accent-dim:     rgba(251,191,36,0.12);
+
+      --success:        #34D399;
+      --warning:        #FBBF24;
+      --danger:         #F87171;
+      --info:           #60A5FA;
+
+      --text-primary:   #CDD6F4;
+      --text-secondary: #8899B8;
+      --text-muted:     #5A6A88;
+      --text-code:      #93C5FD;
+
+      --chart-grid:     rgba(52,61,88,0.7);
+      --chart-text:     #8899B8;
+      --log-bg:         #141820;
+    }
+
+    /* ── LIGHT ── */
+    [data-theme="light"] {
+      --bg-base:        #F0F4FF;
+      --bg-surface:     #FFFFFF;
+      --bg-card:        #FFFFFF;
+      --bg-card-hover:  #EEF2FF;
+      --border:         #D1D9F0;
+      --border-bright:  #93A8E0;
+
+      --primary:        #1D4ED8;
+      --primary-light:  #2563EB;
+      --primary-glow:   rgba(37,99,235,0.08);
+      --accent:         #D97706;
+      --accent-dim:     rgba(217,119,6,0.1);
+
+      --success:        #059669;
+      --warning:        #D97706;
+      --danger:         #DC2626;
+      --info:           #2563EB;
+
+      --text-primary:   #0F172A;
+      --text-secondary: #334155;
+      --text-muted:     #64748B;
+      --text-code:      #1D4ED8;
+
+      --chart-grid:     rgba(148,163,184,0.25);
+      --chart-text:     #475569;
+      --log-bg:         #F8FAFC;
+    }
+
+    /* global transition for theme swap */
+    html { transition: background-color 220ms ease, color 220ms ease; }
+    body, .topnav, .sidebar, .panel, .kpi-card, .agent-item, .reg-card, .log-console {
+      transition:
+        background-color 220ms ease,
+        border-color 220ms ease,
+        color 220ms ease;
+    }
+
+    /* ── THEME TOGGLE WIDGET ── */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .theme-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-heading);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease;
+      white-space: nowrap;
+    }
+
+    .theme-btn svg {
+      width: 11px; height: 11px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .theme-btn:hover {
+      background: var(--primary-glow);
+      color: var(--primary-light);
+    }
+
+    .theme-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 1px 6px rgba(37,99,235,0.35);
+    }
+
+    [data-theme="light"] .theme-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    body.modal-open { overflow: hidden; }
+
+    /* ============================================================
+       SCROLLBAR
+    ============================================================ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
+
+    /* ============================================================
+       LAYOUT
+    ============================================================ */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: 52px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ============================================================
+       TOP NAV
+    ============================================================ */
+    .topnav {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topnav__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-heading);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: 0.02em;
+    }
+
+    .topnav__logo {
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .topnav__logo svg { width: 14px; height: 14px; fill: #fff; }
+
+    .topnav__badge {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 3px;
+      padding: 2px 6px;
+      letter-spacing: 0.08em;
+    }
+
+    .topnav__right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topnav__timestamp {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--success); }
+      50%       { opacity: 0.6; box-shadow: 0 0 2px var(--success); }
+    }
+
+    /* ============================================================
+       SIDEBAR
+    ============================================================ */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow-y: auto;
+    }
+
+    .sidebar__section-label {
+      font-family: var(--font-heading);
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 12px 16px 6px;
+    }
+
+    .sidebar__item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-family: var(--font-body);
+      text-align: left;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+      border-left: 2px solid transparent;
+      text-decoration: none;
+    }
+
+    .sidebar__item:hover {
+      background: var(--primary-glow);
+      color: var(--text-primary);
+      border-left-color: var(--primary-light);
+    }
+
+    .sidebar__item.active {
+      background: var(--primary-glow);
+      color: var(--primary-light);
+      border-left-color: var(--primary-light);
+      font-weight: 500;
+    }
+
+    .sidebar__item svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sidebar__divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px 16px;
+    }
+
+    /* ============================================================
+       MAIN CONTENT
+    ============================================================ */
+    .main {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ============================================================
+       PAGE HEADER
+    ============================================================ */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .page-header__title {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .page-header__subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+    }
+
+    .page-header__subtitle span {
+      color: var(--text-code);
+      font-family: var(--font-heading);
+      font-size: 11px;
+    }
+
+    .text-link-button {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--primary-light);
+      font: inherit;
+      font-size: 10px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .text-link-button:hover {
+      color: var(--text-code);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      border: none;
+      text-decoration: none;
+      font-family: var(--font-body);
+    }
+
+    .btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-light);
+      box-shadow: 0 0 12px rgba(59,130,246,0.35);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--border-bright);
+      color: var(--text-primary);
+      background: var(--bg-card);
+    }
+
+    /* ============================================================
+       KPI CARDS ROW
+    ============================================================ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      cursor: default;
+      transition: border-color var(--transition), background var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+
+    .kpi-card.kpi-blue::before   { background: var(--primary-light); }
+    .kpi-card.kpi-green::before  { background: var(--success); }
+    .kpi-card.kpi-amber::before  { background: var(--accent); }
+    .kpi-card.kpi-purple::before { background: #8B5CF6; }
+
+    .kpi-card:hover {
+      border-color: var(--border-bright);
+      background: var(--bg-card-hover);
+    }
+
+    .kpi-card__label {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .kpi-card__value {
+      font-family: var(--font-heading);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .kpi-card.kpi-blue   .kpi-card__value { color: var(--primary-light); }
+    .kpi-card.kpi-green  .kpi-card__value { color: var(--success); }
+    .kpi-card.kpi-amber  .kpi-card__value { color: var(--accent); }
+    .kpi-card.kpi-purple .kpi-card__value { color: #8B5CF6; }
+
+    .kpi-card__footer {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .kpi-card__footer .delta {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-family: var(--font-heading);
+    }
+
+    .delta.up   { color: var(--success); }
+    .delta.down { color: var(--danger); }
+
+    /* ============================================================
+       SECTION HEADER
+    ============================================================ */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .section-title::before {
+      content: '//';
+      color: var(--primary-light);
+      margin-right: 6px;
+    }
+
+    /* ============================================================
+       CHART PANELS
+    ============================================================ */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+    }
+
+    .chart-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: border-color var(--transition);
+    }
+
+    .panel:hover { border-color: var(--border-bright); }
+
+    .panel__title {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel__title .badge {
+      font-size: 9px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: var(--primary-glow);
+      color: var(--primary-light);
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .chart-fallback {
+      height: 100%;
+      min-height: 100%;
+      border: 1px dashed var(--border-bright);
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(135deg, rgba(59,130,246,0.08), transparent 72%),
+        var(--bg-surface);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* ============================================================
+       MODEL COMPARISON TABLE
+    ============================================================ */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    thead th {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+      cursor: default;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:hover { background: var(--primary-glow); }
+
+    tbody td {
+      padding: 9px 12px;
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    .model-name {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-code);
+    }
+
+    .metric-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .metric-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      flex: 1;
+      min-width: 60px;
+      overflow: hidden;
+    }
+
+    .metric-bar__fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .badge-rank {
+      font-family: var(--font-heading);
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .rank-1 { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+    .rank-2 { background: rgba(245,158,11,0.12); color: var(--accent);  border: 1px solid rgba(245,158,11,0.25); }
+    .rank-3 { background: rgba(148,163,184,0.1); color: var(--text-secondary); border: 1px solid var(--border); }
+
+    /* ============================================================
+       AGENT STATUS PANEL
+    ============================================================ */
+    .agent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .agent-item {
+      display: grid;
+      grid-template-columns: 8px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      transition: border-color var(--transition), background var(--transition);
+      cursor: default;
+    }
+
+    .agent-item:hover {
+      border-color: var(--border-bright);
+      background: var(--bg-card);
+    }
+
+    .agent-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .indicator-done    { background: var(--success); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+    .indicator-running { background: var(--primary-light); box-shadow: 0 0 6px rgba(59,130,246,0.5); animation: pulse-dot 1.5s ease-in-out infinite; }
+    .indicator-idle    { background: var(--text-muted); }
+    .indicator-warn    { background: var(--warning); box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+
+    .agent-info__name {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .agent-info__desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .agent-status-tag {
+      font-family: var(--font-heading);
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .tag-done    { background: rgba(16,185,129,0.12); color: var(--success);        border: 1px solid rgba(16,185,129,0.25); }
+    .tag-running { background: rgba(59,130,246,0.12); color: var(--primary-light);  border: 1px solid rgba(59,130,246,0.25); }
+    .tag-idle    { background: rgba(148,163,184,0.08); color: var(--text-muted);    border: 1px solid var(--border); }
+    .tag-warn    { background: rgba(245,158,11,0.12); color: var(--warning);        border: 1px solid rgba(245,158,11,0.25); }
+
+    /* ============================================================
+       REGULARIZATION PANEL
+    ============================================================ */
+    .reg-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .reg-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      transition: border-color var(--transition);
+    }
+
+    .reg-card:hover { border-color: var(--border-bright); }
+
+    .reg-card__method {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-code);
+      margin-bottom: 6px;
+    }
+
+    .reg-card__alpha {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .reg-card__alpha span {
+      color: var(--accent);
+      font-family: var(--font-heading);
+    }
+
+    .reg-auc {
+      font-family: var(--font-heading);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .reg-card.best-reg {
+      border-color: var(--success);
+      background: rgba(16,185,129,0.05);
+    }
+
+    .reg-card.best-reg .reg-auc { color: var(--success); }
+
+    /* ============================================================
+       PIPELINE STEPS TIMELINE
+    ============================================================ */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .timeline-step {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 0;
+    }
+
+    .timeline-step__track {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .timeline-step__node {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .timeline-step__node.done {
+      border-color: var(--success);
+      background: rgba(16,185,129,0.15);
+    }
+
+    .timeline-step__node.done svg { stroke: var(--success); }
+
+    .timeline-step__node.active {
+      border-color: var(--primary-light);
+      background: rgba(59,130,246,0.15);
+      box-shadow: 0 0 8px rgba(59,130,246,0.4);
+    }
+
+    .timeline-step__node.active svg { stroke: var(--primary-light); }
+
+    .timeline-step__node.error {
+      border-color: var(--danger);
+      background: rgba(239,68,68,0.15);
+      box-shadow: 0 0 8px rgba(239,68,68,0.28);
+    }
+
+    .timeline-step__node.error svg { stroke: var(--danger); }
+
+    .timeline-step__node svg {
+      width: 10px; height: 10px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .timeline-step__line {
+      flex: 1;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .timeline-step:last-child .timeline-step__line { display: none; }
+
+    .timeline-step__content {
+      padding: 0 0 16px 10px;
+    }
+
+    .timeline-step__name {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 22px;
+    }
+
+    .timeline-step__detail {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================================
+       FEATURE IMPORTANCE BAR CHART (horizontal)
+    ============================================================ */
+    .feat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feat-row {
+      display: grid;
+      grid-template-columns: 130px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feat-name {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .feat-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .feat-bar__fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      transition: width 900ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .feat-score {
+      font-family: var(--font-heading);
+      font-size: 10px;
+      color: var(--text-code);
+      text-align: right;
+    }
+
+    /* ============================================================
+       LOG CONSOLE
+    ============================================================ */
+    .log-console {
+      background: var(--log-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-heading);
+      font-size: 11px;
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .log-line { display: flex; gap: 8px; }
+    .log-time { color: var(--text-muted); flex-shrink: 0; }
+    .log-tag  { flex-shrink: 0; padding: 0 5px; border-radius: 2px; font-weight: 600; font-size: 9px; display: flex; align-items: center; }
+    .log-tag.INFO  { background: rgba(59,130,246,0.15); color: var(--primary-light); }
+    .log-tag.DONE  { background: rgba(16,185,129,0.15); color: var(--success); }
+    .log-tag.WARN  { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .log-tag.ERR   { background: rgba(239,68,68,0.15);  color: var(--danger); }
+    .log-msg  { color: var(--text-primary); flex: 1; }
+
+    .tracker-inline-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .tracker-inline-card__title {
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .tracker-inline-card__text {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      max-width: 520px;
+    }
+
+    .tracker-overlay {
+      z-index: 1100;
+    }
+
+    .tracker-modal {
+      max-width: 1120px;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .tracker-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 24px 24px 18px;
+      border-bottom: 1px solid var(--border);
+      background:
+        radial-gradient(circle at top right, rgba(59,130,246,0.14), transparent 34%),
+        linear-gradient(180deg, rgba(17,29,53,0.9), rgba(13,21,38,0.96));
+    }
+
+    .tracker-header__actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .tracker-shell {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      min-height: 560px;
+    }
+
+    .tracker-sidebar {
+      border-right: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(8,13,26,0.9), rgba(13,21,38,0.96));
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .tracker-summary {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(17,29,53,0.85);
+      padding: 16px;
+    }
+
+    .tracker-summary__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .tracker-status {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      font-family: var(--font-heading);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tracker-status--idle {
+      color: var(--text-muted);
+      background: rgba(148,163,184,0.08);
+    }
+
+    .tracker-status--running {
+      color: var(--primary-light);
+      background: rgba(59,130,246,0.12);
+      border-color: rgba(59,130,246,0.28);
+    }
+
+    .tracker-status--done {
+      color: var(--success);
+      background: rgba(16,185,129,0.12);
+      border-color: rgba(16,185,129,0.28);
+    }
+
+    .tracker-status--error {
+      color: var(--danger);
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.28);
+    }
+
+    .tracker-progress__pct {
+      font-family: var(--font-heading);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .tracker-progress {
+      height: 10px;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    .tracker-progress__bar {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      transition: width 220ms ease;
+    }
+
+    .tracker-current-phase {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .tracker-phase-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tracker-phase-card {
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(17,29,53,0.72);
+      padding: 14px 14px 12px;
+      transition: border-color var(--transition), background var(--transition);
+    }
+
+    .tracker-phase-card.is-idle {
+      border-left-color: var(--border);
+    }
+
+    .tracker-phase-card.is-running {
+      border-left-color: var(--primary-light);
+      background: rgba(59,130,246,0.08);
+    }
+
+    .tracker-phase-card.is-done {
+      border-left-color: var(--success);
+      background: rgba(16,185,129,0.08);
+    }
+
+    .tracker-phase-card.is-error {
+      border-left-color: var(--danger);
+      background: rgba(239,68,68,0.08);
+    }
+
+    .tracker-phase-card__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .tracker-phase-card__title {
+      font-family: var(--font-heading);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .tracker-phase-card__detail {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .tracker-phase-card__badge {
+      font-family: var(--font-heading);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 3px 7px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .tracker-phase-card__badge.is-idle {
+      color: var(--text-muted);
+      background: rgba(148,163,184,0.08);
+    }
+
+    .tracker-phase-card__badge.is-running {
+      color: var(--primary-light);
+      background: rgba(59,130,246,0.12);
+      border-color: rgba(59,130,246,0.28);
+    }
+
+    .tracker-phase-card__badge.is-done {
+      color: var(--success);
+      background: rgba(16,185,129,0.12);
+      border-color: rgba(16,185,129,0.28);
+    }
+
+    .tracker-phase-card__badge.is-error {
+      color: var(--danger);
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.28);
+    }
+
+    .tracker-phase-card__meter {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .tracker-phase-card__fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      transition: width 220ms ease, background-color 220ms ease;
+      background: var(--text-muted);
+    }
+
+    .tracker-main {
+      padding: 20px 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+      background: linear-gradient(180deg, rgba(13,21,38,0.94), rgba(8,13,26,0.96));
+    }
+
+    .tracker-main__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .tracker-run-state {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .tracker-error {
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: var(--radius-md);
+      background: rgba(239,68,68,0.08);
+      color: #fecaca;
+      font-size: 11px;
+      padding: 10px 12px;
+    }
+
+    .tracker-log-console {
+      flex: 1;
+      max-height: none;
+      min-height: 340px;
+    }
+
+    /* ============================================================
+       BOTTOM GRID
+    ============================================================ */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 12px;
+    }
+
+    .last-case-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .last-case-empty {
+      border: 1px dashed var(--border-bright);
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--primary-glow), transparent 70%);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+      padding: 18px;
+    }
+
+    .last-case-hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .last-case-title {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .last-case-meta {
+      margin-top: 4px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .last-case-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 110px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      font-family: var(--font-heading);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .last-case-pill.is-class-1 {
+      border-color: rgba(16,185,129,0.35);
+      background: rgba(16,185,129,0.12);
+      color: var(--success);
+    }
+
+    .last-case-pill.is-class-0 {
+      border-color: rgba(245,158,11,0.35);
+      background: rgba(245,158,11,0.12);
+      color: var(--accent);
+    }
+
+    .last-case-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .last-case-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .last-case-item__label {
+      font-family: var(--font-heading);
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .last-case-item__value {
+      font-size: 12px;
+      color: var(--text-primary);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .footer {
+      text-align: center;
+      font-family: var(--font-heading);
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 12px 0 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer span { color: var(--primary-light); }
+
+    /* ============================================================
+       ANIMATIONS
+    ============================================================ */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .kpi-card, .panel, .agent-item, .reg-card {
+      animation: fadeInUp 0.4s ease both;
+    }
+
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.20s; }
+
+    /* ============================================================
+       MODAL: DATA CONFIG
+    ============================================================ */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(8, 13, 26, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      transform: translateY(20px);
+      transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { margin-bottom: 20px; }
+    .modal-title { font-family: var(--font-heading); font-size: 16px; font-weight: 600; color: var(--text-primary); }
+    .modal-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .modal-section-label { font-family: var(--font-heading); font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin: 16px 0 8px; }
+    
+    .data-option {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .data-option:hover { border-color: var(--primary-light); background: var(--bg-card-hover); }
+    .data-option.selected { border-color: var(--primary); background: var(--primary-glow); }
+    .data-option__title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .data-option__meta { font-family: var(--font-heading); font-size: 9px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .data-option__path { font-family: var(--font-heading); font-size: 10px; color: var(--text-code); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .data-option--empty { cursor: default; }
+    .data-option--empty:hover { border-color: var(--border); background: var(--bg-card); }
+    
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-top: 10px;
+    }
+    .upload-area:hover { border-color: var(--primary-light); background: var(--primary-glow); }
+    .upload-area.selected { border-color: var(--primary); background: var(--primary-glow); }
+    .upload-area svg { width: 24px; height: 24px; stroke: var(--text-muted); margin-bottom: 8px; }
+    .upload-area p { font-size: 12px; color: var(--text-secondary); }
+    
+    .modal-footer { margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .bottom-grid { grid-template-columns: 1fr; }
+      .chart-grid-3 { grid-template-columns: 1fr; }
+      .last-case-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .tracker-shell { grid-template-columns: 1fr; }
+      .tracker-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .reg-grid { grid-template-columns: 1fr; }
+      .last-case-hero { flex-direction: column; align-items: stretch; }
+      .last-case-grid { grid-template-columns: 1fr; }
+      .tracker-inline-card,
+      .tracker-header,
+      .tracker-main__top { flex-direction: column; align-items: flex-start; }
+      .tracker-header__actions { justify-content: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- TOP NAV -->
+  <nav class="topnav" role="navigation" aria-label="Main navigation">
+    <div class="topnav__brand">
+      <div class="topnav__logo" aria-hidden="true">
+        <svg viewBox="0 0 16 16"><path d="M2 8 L6 4 L10 9 L13 6"/><circle cx="13" cy="6" r="2"/></svg>
+      </div>
+      Dallas 311 &nbsp;/&nbsp; ML Pipeline
+      <span class="topnav__badge">v1.0.0-agentic</span>
+    </div>
+    <div class="topnav__right">
+      <span class="topnav__timestamp" id="live-clock" aria-live="polite">--:--:--</span>
+
+      <!-- THEME TOGGLE -->
+      <div class="theme-toggle" role="group" aria-label="Theme selector">
+        <button class="theme-btn" id="theme-dark" aria-pressed="true" title="Dark mode">
+          <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          Dark
+        </button>
+        <button class="theme-btn" id="theme-dim" aria-pressed="false" title="Dim mode">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          Dim
+        </button>
+        <button class="theme-btn" id="theme-light" aria-pressed="false" title="Light mode">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          Light
+        </button>
+      </div>
+
+      <div class="status-dot" title="Pipeline Online" aria-label="Pipeline status: Online"></div>
+    </div>
+  </nav>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" role="complementary" aria-label="Navigation">
+    <span class="sidebar__section-label">Pipeline</span>
+    <a href="#overview"        class="sidebar__item active" id="nav-overview">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </a>
+    <a href="#models"          class="sidebar__item" id="nav-models">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Model Performance
+    </a>
+    <a href="#regularization"  class="sidebar__item" id="nav-reg">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Regularization
+    </a>
+    <a href="#features"        class="sidebar__item" id="nav-features">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Feature Importance
+    </a>
+    <div class="sidebar__divider"></div>
+    <span class="sidebar__section-label">Agents</span>
+    <a href="#agents"          class="sidebar__item" id="nav-agents">
+      <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2zM4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
+      Agent Status
+    </a>
+    <button type="button" class="sidebar__item" id="nav-logs">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Run Tracker
+    </button>
+    <div class="sidebar__divider"></div>
+    <span class="sidebar__section-label">Data</span>
+    <a href="#pipeline"        class="sidebar__item" id="nav-pipeline">
+      <svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      Pipeline Steps
+    </a>
+    <button type="button" class="sidebar__item" id="nav-data-config">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Configure Data
+      <span style="font-size:8px; color:var(--success); margin-left:auto; opacity:0.8;" id="sidebar-data-status">Default</span>
+    </button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" role="main">
+
+    <!-- PAGE HEADER -->
+    <section id="overview" class="page-header">
+      <div>
+        <h1 class="page-header__title">Pipeline Dashboard</h1>
+        <p class="page-header__subtitle">
+          Dallas 311 Service Requests &mdash; Binary Classification &nbsp;|
+          Target: <span>days_to_close &gt; median</span> &nbsp;|
+          Dataset: <span id="header-dataset-name">Loading latest run...</span> &nbsp;
+          <a href="/pipeline-tester?launch=same-tab" id="header-change-data" class="text-link-button">Change</a>
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" id="btn-refresh" aria-label="Refresh dashboard">
+          <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+        <button class="btn btn-ghost" id="btn-save-dashboard-main" aria-label="Save model and refresh dashboard" disabled>
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save &amp; Refresh
+        </button>
+        <button class="btn btn-primary" id="btn-run" aria-label="Run pipeline">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run Pipeline
+        </button>
+      </div>
+    </section>
+
+    <!-- KPI STRIP -->
+    <section aria-label="Key Performance Indicators">
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-green" role="region" aria-label="Best ROC AUC metric">
+          <div class="kpi-card__label">Best ROC-AUC</div>
+          <div class="kpi-card__value" id="kpi-auc">—</div>
+          <div class="kpi-card__footer" id="kpi-auc-footer">Latest saved run metric</div>
+        </div>
+        <div class="kpi-card kpi-blue" role="region" aria-label="Best Accuracy metric">
+          <div class="kpi-card__label">Best Accuracy</div>
+          <div class="kpi-card__value" id="kpi-acc">—</div>
+          <div class="kpi-card__footer" id="kpi-acc-footer">Waiting for a completed run</div>
+        </div>
+        <div class="kpi-card kpi-amber" role="region" aria-label="Training samples metric">
+          <div class="kpi-card__label">Training Samples</div>
+          <div class="kpi-card__value" id="kpi-train-samples">—</div>
+          <div class="kpi-card__footer" id="kpi-train-samples-footer">Waiting for a completed run</div>
+        </div>
+        <div class="kpi-card kpi-purple" role="region" aria-label="Active features metric">
+          <div class="kpi-card__label">Active Features</div>
+          <div class="kpi-card__value" id="kpi-feat">—</div>
+          <div class="kpi-card__footer" id="kpi-feat-footer">Waiting for a completed run</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODEL ROC AND PIE -->
+    <section id="models" aria-label="Model Performance Charts">
+      <div class="section-header">
+        <span class="section-title">Model Performance</span>
+        <span style="font-family:var(--font-heading);font-size:10px;color:var(--text-muted);">Logistic Regression · Random Forest · XGBoost</span>
+      </div>
+      <div class="chart-grid">
+        <!-- ROC Line Chart -->
+        <div class="panel">
+          <div class="panel__title">
+            ROC Curve Comparison
+            <span class="badge">AUC</span>
+          </div>
+          <div class="chart-wrap" style="height:240px;">
+            <canvas id="chart-roc" aria-label="ROC Curve comparison chart"></canvas>
+          </div>
+        </div>
+        <!-- Accuracy Donut -->
+        <div class="panel">
+          <div class="panel__title">
+            Accuracy Distribution
+            <span class="badge">F1 / ACC</span>
+          </div>
+          <div class="chart-wrap" style="height:240px;">
+            <canvas id="chart-acc" aria-label="Accuracy distribution chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODEL COMPARISON TABLE -->
+    <section aria-label="Model comparison table">
+      <div class="section-header">
+        <span class="section-title">Comparison Table</span>
+      </div>
+      <div class="panel" style="padding: 0;">
+        <div class="table-wrap">
+          <table aria-label="ML Model Comparison">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>ROC-AUC</th>
+                <th>Accuracy</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1</th>
+                <th>Train Time</th>
+                <th>Rank</th>
+              </tr>
+            </thead>
+            <tbody id="model-table-body">
+              <!-- Injected via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGULARIZATION -->
+    <section id="regularization" aria-label="Regularization Results">
+      <div class="section-header">
+        <span class="section-title">Regularization Results</span>
+        <span style="font-family:var(--font-heading);font-size:10px;color:var(--text-muted);" id="reg-summary-note">Awaiting saved run</span>
+      </div>
+      <div class="panel">
+        <div class="reg-grid" id="reg-grid"></div>
+        <!-- Coefficient chart -->
+        <div style="margin-top:16px;">
+          <div class="panel__title" id="coef-chart-title">Top Regularization Coefficients</div>
+          <div class="chart-wrap" style="height:180px;">
+            <canvas id="chart-coef" aria-label="LASSO coefficient chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Last trained case">
+      <div class="section-header">
+        <span class="section-title">Last Trained Case</span>
+        <span style="font-family:var(--font-heading);font-size:10px;color:var(--text-muted);" id="last-case-status">Awaiting successful run</span>
+      </div>
+      <div class="panel last-case-panel">
+        <div class="last-case-empty" id="last-case-empty">Run the pipeline to pin the most recent case retained in the training sample.</div>
+        <div id="last-case-content" hidden>
+          <div class="last-case-hero">
+            <div>
+              <div class="last-case-title" id="last-case-title">Training sample case</div>
+              <div class="last-case-meta" id="last-case-meta">Most recent case retained in the latest successful run.</div>
+            </div>
+            <span class="last-case-pill" id="last-case-pill">Target —</span>
+          </div>
+          <div class="last-case-grid" style="margin-top:16px;">
+            <div class="last-case-item">
+              <span class="last-case-item__label">Created Date</span>
+              <strong class="last-case-item__value" id="last-case-created">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">Department</span>
+              <strong class="last-case-item__value" id="last-case-department">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">Priority</span>
+              <strong class="last-case-item__value" id="last-case-priority">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">Method</span>
+              <strong class="last-case-item__value" id="last-case-method">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">District</span>
+              <strong class="last-case-item__value" id="last-case-district">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">Response Time</span>
+              <strong class="last-case-item__value" id="last-case-response">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">ERT Days</span>
+              <strong class="last-case-item__value" id="last-case-ert">—</strong>
+            </div>
+            <div class="last-case-item">
+              <span class="last-case-item__label">Due Date</span>
+              <strong class="last-case-item__value" id="last-case-due">—</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM GRID: Feature Importance + Agent Status + Pipeline Steps -->
+    <div class="bottom-grid">
+
+      <!-- FEATURE IMPORTANCE -->
+      <section id="features" class="panel" aria-label="Feature Importance">
+        <div class="panel__title">Feature Importance <span class="badge" id="features-model-badge">Awaiting Run</span></div>
+        <div class="feat-list" id="feat-list">
+          <!-- Injected via JS -->
+        </div>
+      </section>
+
+      <!-- AGENT STATUS -->
+      <section id="agents" class="panel" aria-label="Agent Status">
+        <div class="panel__title">Agent Status</div>
+        <div class="agent-list" id="agent-list"></div>
+      </section>
+
+      <!-- PIPELINE TIMELINE -->
+      <section id="pipeline" class="panel" aria-label="Pipeline Steps">
+        <div class="panel__title">Pipeline Steps</div>
+        <div class="timeline" id="pipeline-timeline"></div>
+      </section>
+    </div>
+
+    <!-- RUN TRACKER -->
+    <section id="logs" aria-label="Pipeline Run Tracker">
+      <div class="section-header">
+        <span class="section-title">Run Tracker</span>
+        <button class="btn btn-ghost" id="btn-open-tracker" aria-label="Open tracker window" style="font-size:10px;padding:4px 10px;">Open Pop-Up</button>
+      </div>
+      <div class="panel tracker-inline-card">
+        <div>
+          <div class="tracker-inline-card__title">Live phase completion and logs open in a dedicated window</div>
+          <p class="tracker-inline-card__text">Kick off a run to watch the pipeline progress in a focused pop-up with phase cards, overall completion, and streaming background logs.</p>
+        </div>
+        <button class="btn btn-primary" id="btn-open-tracker-primary" aria-label="Open tracker pop-up">Open Tracker</button>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      Dallas 311 Service Requests &mdash; ML Pipeline &nbsp;·&nbsp; 
+      <span>DataPrepAgent</span> · <span>TransformationAgent</span> · 
+      <span>ModelSelectionAgent</span> · <span>RegularizationAgent</span> · <span>DiagnosticsAgent</span>
+      &nbsp;·&nbsp; UTDAL ASDS 6302
+    </footer>
+
+  </main>
+</div>
+
+<script id="dashboard-bootstrap" type="application/json">null</script>
+<script>
+(function() {
+  const STORAGE_KEY = 'dashboard-bootstrap-cache';
+
+  function readCachedBootstrap() {
+    try {
+      const cached = window.sessionStorage.getItem(STORAGE_KEY);
+      if (!cached) return null;
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      return JSON.parse(cached);
+    } catch (_) {
+      try { window.sessionStorage.removeItem(STORAGE_KEY); } catch (__){ }
+      return null;
+    }
+  }
+
+  function readEmbeddedBootstrap() {
+    const bootstrapEl = document.getElementById('dashboard-bootstrap');
+    const rawPayload = bootstrapEl?.textContent?.trim();
+    if (!rawPayload || rawPayload === 'null') return null;
+
+    try {
+      return JSON.parse(rawPayload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function formatCount(value, fallback = '—') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? Math.round(numeric).toLocaleString('en-US') : fallback;
+  }
+
+  function formatPercent(value, fallback = '—') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? `${(numeric * 100).toFixed(1)}%` : fallback;
+  }
+
+  function formatAuc(value, fallback = '—') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(4) : fallback;
+  }
+
+  function formatDisplayDate(value, fallback = '—') {
+    if (!value) return fallback;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function formatNumeric(value, digits = 2, suffix = '', fallback = '—') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? `${numeric.toFixed(digits)}${suffix}` : fallback;
+  }
+
+  function fileName(path) {
+    if (!path) return '';
+    const parts = String(path).split(/[\\/]/);
+    return parts[parts.length - 1] || String(path);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function buildRocData(auc) {
+    const numericAuc = Number(auc);
+    const safeAuc = Number.isFinite(numericAuc) ? numericAuc : 0.5;
+    const points = [];
+    for (let idx = 0; idx <= 24; idx += 1) {
+      const fpr = idx / 24;
+      const tpr = Math.min(1, Math.pow(fpr, 1 - safeAuc) + safeAuc * Math.sin(fpr * Math.PI / 2) * 0.3 + safeAuc * fpr);
+      points.push({ x: fpr, y: Math.max(0, Math.min(1, tpr)) });
+    }
+    return points;
+  }
+
+  function getCanvasContext(canvasId, fallbackWidth, fallbackHeight) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+
+    const width = Math.max(canvas.clientWidth || canvas.parentElement?.clientWidth || fallbackWidth, fallbackWidth);
+    const height = Math.max(canvas.clientHeight || canvas.parentElement?.clientHeight || fallbackHeight, fallbackHeight);
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    return { ctx, width, height };
+  }
+
+  function drawBootstrapRocChart(models) {
+    const state = getCanvasContext('chart-roc', 520, 240);
+    if (!state || !Array.isArray(models) || !models.length) return;
+
+    const { ctx, width, height } = state;
+    const padding = { top: 16, right: 18, bottom: 28, left: 34 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    const palette = ['#8B5CF6', '#F59E0B', '#10B981'];
+
+    ctx.strokeStyle = 'rgba(148,163,184,0.18)';
+    ctx.lineWidth = 1;
+    for (let idx = 0; idx <= 4; idx += 1) {
+      const y = padding.top + (chartHeight * idx) / 4;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(148,163,184,0.36)';
+    ctx.beginPath();
+    ctx.moveTo(padding.left, padding.top);
+    ctx.lineTo(padding.left, height - padding.bottom);
+    ctx.lineTo(width - padding.right, height - padding.bottom);
+    ctx.stroke();
+
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = 'rgba(148,163,184,0.42)';
+    ctx.beginPath();
+    ctx.moveTo(padding.left, height - padding.bottom);
+    ctx.lineTo(width - padding.right, padding.top);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    models.slice(0, 3).forEach((model, idx) => {
+      const points = buildRocData(model.ROC_AUC);
+      ctx.strokeStyle = palette[idx] || '#3B82F6';
+      ctx.lineWidth = idx === 2 ? 2.4 : 2;
+      ctx.beginPath();
+      points.forEach((point, pointIdx) => {
+        const x = padding.left + point.x * chartWidth;
+        const y = height - padding.bottom - point.y * chartHeight;
+        if (pointIdx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    });
+  }
+
+  function drawBootstrapAccuracyChart(models, bestModelLabel) {
+    const state = getCanvasContext('chart-acc', 320, 240);
+    if (!state || !Array.isArray(models) || !models.length) return;
+
+    const { ctx, width, height } = state;
+    const palette = ['#8B5CF6', '#F59E0B', '#10B981'];
+    const values = models.map(model => {
+      const value = Number(model.Accuracy);
+      return Number.isFinite(value) ? Math.max(value, 0.01) : 0.01;
+    });
+    const total = values.reduce((sum, value) => sum + value, 0);
+    const centerX = width / 2;
+    const centerY = Math.max(82, height / 2 - 8);
+    const radius = Math.min(width, height) * 0.28;
+    let start = -Math.PI / 2;
+
+    values.forEach((value, idx) => {
+      const sweep = total > 0 ? (value / total) * Math.PI * 2 : 0;
+      ctx.beginPath();
+      ctx.strokeStyle = palette[idx] || '#3B82F6';
+      ctx.lineWidth = 18;
+      ctx.arc(centerX, centerY, radius, start, start + sweep);
+      ctx.stroke();
+      start += sweep;
+    });
+
+    ctx.fillStyle = '#E2E8F0';
+    ctx.font = '700 12px "Fira Code", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(bestModelLabel || 'Saved run', centerX, centerY - 2);
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '11px "Fira Sans", sans-serif';
+    ctx.fillText('accuracy split', centerX, centerY + 16);
+
+    models.slice(0, 3).forEach((model, idx) => {
+      const y = height - 52 + idx * 16;
+      ctx.fillStyle = palette[idx] || '#3B82F6';
+      ctx.fillRect(24, y - 8, 8, 8);
+      ctx.fillStyle = '#E2E8F0';
+      ctx.textAlign = 'left';
+      ctx.font = '11px "Fira Sans", sans-serif';
+      ctx.fillText(`${model.Model}: ${formatPercent(model.Accuracy)}`, 38, y);
+    });
+  }
+
+  function drawBootstrapCoefficientChart(reg) {
+    const state = getCanvasContext('chart-coef', 520, 180);
+    if (!state) return;
+
+    const { ctx, width, height } = state;
+    const coefficients = Array.isArray(reg?.coef_summary)
+      ? reg.coef_summary.filter(item => item.Method === reg?.best_method).slice(0, 8)
+      : [];
+    if (!coefficients.length) return;
+
+    const padding = { top: 18, right: 18, bottom: 20, left: 18 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    const magnitudes = coefficients.map(item => Math.abs(Number(item.Coefficient) || 0));
+    const maxMagnitude = Math.max(...magnitudes, 0.001);
+    const step = chartHeight / Math.max(coefficients.length, 1);
+    const barHeight = Math.max(12, Math.min(18, step - 4));
+
+    coefficients.forEach((item, idx) => {
+      const numeric = Number(item.Coefficient) || 0;
+      const y = padding.top + idx * step;
+      const barWidth = Math.min(1, Math.abs(numeric) / maxMagnitude) * chartWidth;
+
+      ctx.fillStyle = numeric >= 0 ? 'rgba(59,130,246,0.72)' : 'rgba(239,68,68,0.72)';
+      ctx.fillRect(padding.left, y, barWidth, barHeight);
+
+      ctx.fillStyle = '#E2E8F0';
+      ctx.font = '10px "Fira Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${String(item.Feature || '').slice(0, 28)} (${numeric.toFixed(2)})`, padding.left + 6, y + barHeight - 3);
+    });
+  }
+
+  function renderBootstrapModelTable(models) {
+    const tbody = document.getElementById('model-table-body');
+    if (!tbody) return;
+
+    const rows = Array.isArray(models)
+      ? [...models].sort((a, b) => (Number(b.ROC_AUC) || 0) - (Number(a.ROC_AUC) || 0))
+      : [];
+    const palette = ['#8B5CF6', '#F59E0B', '#10B981'];
+    tbody.innerHTML = '';
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:18px;color:var(--text-muted);text-align:center;">Awaiting saved run.</td></tr>';
+      return;
+    }
+
+    rows.forEach((model, idx) => {
+      const rank = idx + 1;
+      const color = palette[idx] || '#3B82F6';
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><span class="model-name">${escapeHtml(model.Model || 'Model')}</span></td>
+        <td>
+          <div class="metric-bar-wrap">
+            <div class="metric-bar"><div class="metric-bar__fill" style="width:${Math.max(0, Math.min(100, (Number(model.ROC_AUC) || 0) * 100))}%;background:${color};"></div></div>
+            <span style="font-family:var(--font-heading);font-size:11px;color:var(--text-code);min-width:40px;">${formatAuc(model.ROC_AUC)}</span>
+          </div>
+        </td>
+        <td>${formatPercent(model.Accuracy)}</td>
+        <td>${formatPercent(model.Precision)}</td>
+        <td>${formatPercent(model.Recall)}</td>
+        <td>${formatPercent(model.F1)}</td>
+        <td style="font-family:var(--font-heading);font-size:11px;color:var(--text-muted);">-</td>
+        <td><span class="badge-rank ${rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : ''}">${rank === 1 ? '#1 Best' : `#${rank}`}</span></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function renderBootstrapRegularization(reg) {
+    const regGrid = document.getElementById('reg-grid');
+    const summary = document.getElementById('reg-summary-note');
+    const coefTitle = document.getElementById('coef-chart-title');
+    if (!regGrid || !summary || !coefTitle) return;
+
+    const methods = [
+      { key: 'Ridge', label: 'Ridge (L2)' },
+      { key: 'LASSO', label: 'LASSO (L1)' },
+      { key: 'ElasticNet', label: 'ElasticNet' },
+    ];
+    const allResults = reg?.all_results || {};
+
+    summary.textContent = reg?.best_method
+      ? `Best method: ${reg.best_method} | ROC-AUC ${formatAuc(reg.best_roc_auc, '0.0000')}`
+      : 'Awaiting saved run';
+    coefTitle.textContent = reg?.best_method ? `Top ${reg.best_method} Coefficients` : 'Top Regularization Coefficients';
+
+    regGrid.innerHTML = '';
+    methods.forEach(method => {
+      const result = allResults[method.key] || null;
+      const card = document.createElement('div');
+      card.className = `reg-card${reg?.best_method === method.key ? ' best-reg' : ''}`;
+      card.innerHTML = `
+        <div class="reg-card__method">${escapeHtml(method.label)}${reg?.best_method === method.key ? ' *' : ''}</div>
+        <div class="reg-card__alpha">Best alpha: <span>${result?.best_alpha ?? '-'}</span></div>
+        <div class="reg-auc">${result?.roc_auc != null ? formatAuc(result.roc_auc) : '-'}</div>
+        <div style="font-size:10px;color:${reg?.best_method === method.key ? 'var(--success)' : 'var(--text-muted)'};margin-top:4px;">${reg?.best_method === method.key ? 'Best Method' : 'ROC-AUC'}</div>
+      `;
+      regGrid.appendChild(card);
+    });
+
+    drawBootstrapCoefficientChart(reg);
+  }
+
+  function renderBootstrapLastCase(caseData, finishedAt) {
+    const status = document.getElementById('last-case-status');
+    const empty = document.getElementById('last-case-empty');
+    const content = document.getElementById('last-case-content');
+    const pill = document.getElementById('last-case-pill');
+    if (!status || !empty || !content || !pill) return;
+
+    if (!caseData) {
+      status.textContent = 'Awaiting successful run';
+      empty.hidden = false;
+      content.hidden = true;
+      pill.className = 'last-case-pill';
+      pill.textContent = 'Target -';
+      return;
+    }
+
+    status.textContent = finishedAt ? `Last run: ${formatDisplayDate(finishedAt)}` : 'Loaded from previous run';
+    empty.hidden = true;
+    content.hidden = false;
+
+    setText('last-case-title', caseData.service_request_type || 'Training sample case');
+    setText('last-case-meta', `${caseData.department_grouped || caseData.department || 'Department'} | ${finishedAt ? formatDisplayDate(finishedAt) : 'Latest successful run'}`);
+    setText('last-case-created', formatDisplayDate(caseData.created_date));
+    setText('last-case-department', caseData.department || caseData.department_grouped || '—');
+    setText('last-case-priority', caseData.priority || '—');
+    setText('last-case-method', caseData.method_received_description || '—');
+    setText('last-case-district', caseData.city_council_district ?? '—');
+    setText('last-case-response', formatNumeric(caseData.days_to_close_hours, 2, ' hrs'));
+    setText('last-case-ert', formatNumeric(caseData.ert_days, 2, ' days'));
+    setText('last-case-due', caseData.overall_due_date || '—');
+
+    pill.className = 'last-case-pill';
+    if (caseData.target_class === 1) pill.classList.add('is-class-1');
+    if (caseData.target_class === 0) pill.classList.add('is-class-0');
+    pill.textContent = caseData.target_class === 0 || caseData.target_class === 1
+      ? `Target Class ${caseData.target_class}`
+      : 'Target -';
+  }
+
+  function renderBootstrapFeatures(features, bestModelLabel) {
+    const container = document.getElementById('feat-list');
+    if (!container) return;
+
+    setText('features-model-badge', bestModelLabel || 'Saved run');
+    container.innerHTML = '';
+
+    const rows = Array.isArray(features) ? features.slice(0, 10) : [];
+    const maxScore = Math.max(...rows.map(feature => Number(feature.score) || 0), 0.001);
+
+    if (!rows.length) {
+      container.innerHTML = `
+        <div class="feat-row">
+          <span class="feat-name">No importance scores</span>
+          <div class="feat-bar"><div class="feat-bar__fill" style="width:0%"></div></div>
+          <span class="feat-score">-</span>
+        </div>
+      `;
+      return;
+    }
+
+    rows.forEach(feature => {
+      const score = Number(feature.score) || 0;
+      const row = document.createElement('div');
+      row.className = 'feat-row';
+      row.innerHTML = `
+        <span class="feat-name" title="${escapeHtml(feature.name || '')}">${escapeHtml(feature.name || 'Feature')}</span>
+        <div class="feat-bar"><div class="feat-bar__fill" style="width:${((score / maxScore) * 100).toFixed(1)}%"></div></div>
+        <span class="feat-score">${score.toFixed(3)}</span>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function renderBootstrapAgents() {
+    const agentList = document.getElementById('agent-list');
+    if (!agentList) return;
+
+    const phases = [
+      ['DataPrepAgent', 'Load, clean, and prepare the training sample.'],
+      ['TransformationAgent', 'Engineer time features, encode fields, and prepare the split.'],
+      ['DiagnosticsAgent', 'Check balance, skew, and validation diagnostics.'],
+      ['ModelSelectionAgent', 'Train and compare Logistic Regression, Random Forest, and XGBoost.'],
+      ['RegularizationAgent', 'Score Ridge, LASSO, and ElasticNet for the final selection.'],
+    ];
+
+    agentList.innerHTML = '';
+    phases.forEach(([name, detail]) => {
+      const item = document.createElement('div');
+      item.className = 'agent-item';
+      item.innerHTML = `
+        <div class="agent-indicator indicator-done" aria-label="Done"></div>
+        <div class="agent-info">
+          <div class="agent-info__name">${name}</div>
+          <div class="agent-info__desc">${detail}</div>
+        </div>
+        <span class="agent-status-tag tag-done">DONE</span>
+      `;
+      agentList.appendChild(item);
+    });
+  }
+
+  function renderBootstrapPipelineSteps() {
+    const timeline = document.getElementById('pipeline-timeline');
+    if (!timeline) return;
+
+    const steps = [
+      ['Phase 1 · Data Prep', 'Load the uploaded CSV, drop unused columns, and prepare the training sample.'],
+      ['Phase 2 · Transformation', 'Parse dates, engineer response-time features, and create the binary target.'],
+      ['Phase 3 · Diagnostics', 'Run normality and class-balance checks before model training continues.'],
+      ['Phase 4 · Model Selection', 'Train Logistic Regression, Random Forest, and XGBoost to pick the leader.'],
+      ['Phase 5 · Regularization', 'Compare Ridge, LASSO, and ElasticNet before finalizing the best result.'],
+    ];
+
+    timeline.innerHTML = '';
+    steps.forEach(([title, detail]) => {
+      const step = document.createElement('div');
+      step.className = 'timeline-step';
+      step.innerHTML = `
+        <div class="timeline-step__track">
+          <div class="timeline-step__node done">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div class="timeline-step__line"></div>
+        </div>
+        <div class="timeline-step__content">
+          <div class="timeline-step__name" style="color:var(--success);">${title}</div>
+          <div class="timeline-step__detail">${detail}</div>
+        </div>
+      `;
+      timeline.appendChild(step);
+    });
+  }
+
+  function primeDashboardShell(payload) {
+    const results = payload?.results;
+    if (!results) return;
+
+    const models = Array.isArray(results.models) ? results.models : [];
+    const best = models.find(model => model.Model === results.best_model) || models[0] || {};
+    const trainCount = Array.isArray(results.train_test) ? results.train_test[0] : null;
+    const testCount = Array.isArray(results.train_test) ? results.train_test[1] : null;
+    const modeledTotal = [trainCount, testCount].every(value => Number.isFinite(Number(value)))
+      ? Number(trainCount) + Number(testCount)
+      : null;
+    const bestModelLabel = best.Model || results.best_model || 'Saved run';
+    const datasetName = fileName(results.data_path || payload.data_path || '');
+
+    if (datasetName) {
+      setText('header-dataset-name', datasetName);
+      setText('sidebar-data-status', datasetName.length > 10 ? `${datasetName.substring(0, 8)}...` : datasetName);
+    }
+
+    setText('kpi-auc', formatAuc(results.regularization?.best_roc_auc ?? best.ROC_AUC));
+    setText('kpi-acc', formatPercent(best.Accuracy));
+    setText('kpi-auc-footer', `Best model: ${bestModelLabel}`);
+    setText('kpi-acc-footer', `Latest saved run | ${bestModelLabel}`);
+    setText('kpi-train-samples', formatCount(trainCount));
+    setText(
+      'kpi-train-samples-footer',
+      [
+        Number.isFinite(Number(testCount)) ? `${formatCount(testCount)} test` : '',
+        modeledTotal !== null ? `${formatCount(modeledTotal)} modeled rows` : '',
+      ].filter(Boolean).join(' | ') || 'Awaiting completed run'
+    );
+    setText('kpi-feat', formatCount((results.feature_importance || []).length));
+    setText(
+      'kpi-feat-footer',
+      modeledTotal !== null
+        ? `Top importances from ${formatCount(modeledTotal)} modeled rows`
+        : 'Feature importance from latest saved run'
+    );
+    renderBootstrapModelTable(models);
+    renderBootstrapRegularization(results.regularization || {});
+    renderBootstrapLastCase(results.last_trained_case || null, results.finished_at || payload.finished_at || null);
+    renderBootstrapFeatures(results.feature_importance || [], bestModelLabel);
+    renderBootstrapAgents();
+    renderBootstrapPipelineSteps();
+    drawBootstrapRocChart(models);
+    drawBootstrapAccuracyChart(models, bestModelLabel);
+  }
+
+  const payload = readCachedBootstrap() || readEmbeddedBootstrap();
+  if (payload) {
+    window.__dashboardBootstrapCache = payload;
+    primeDashboardShell(payload);
+  }
+})();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+/* ============================================================
+   INITIAL EMPTY STATE
+============================================================ */
+const MODELS = [];
+const FEATURES = [];
+const LASSO_COEFS = [];
+const LOGS = [];
+
+/* ============================================================
+   CHART COLORS
+============================================================ */
+const C = {
+  blue:   '#3B82F6',
+  green:  '#10B981',
+  amber:  '#F59E0B',
+  purple: '#8B5CF6',
+  red:    '#EF4444',
+  get grid()  { return getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(30,48,96,0.6)'; },
+  get text()  { return getComputedStyle(document.documentElement).getPropertyValue('--chart-text').trim() || '#94A3B8'; },
+};
+const chartsAvailable = typeof window.Chart !== 'undefined';
+
+function renderChartFallback(canvasId, message) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const wrap = canvas.parentElement;
+  if (!wrap) return;
+
+  canvas.style.display = 'none';
+  if (wrap.querySelector('.chart-fallback')) return;
+
+  const fallback = document.createElement('div');
+  fallback.className = 'chart-fallback';
+  fallback.textContent = message;
+  wrap.appendChild(fallback);
+}
+
+if (!chartsAvailable) {
+  renderChartFallback('chart-roc', 'ROC chart unavailable because Chart.js did not load. The dashboard controls still work.');
+  renderChartFallback('chart-acc', 'Accuracy chart unavailable because Chart.js did not load. The dashboard controls still work.');
+  renderChartFallback('chart-coef', 'Coefficient chart unavailable because Chart.js did not load. The dashboard controls still work.');
+}
+
+/* ============================================================
+   THEME SWITCHER
+============================================================ */
+const THEMES = ['dark', 'dim', 'light'];
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('d311-theme', theme);
+
+  // Update button states
+  THEMES.forEach(t => {
+    const btn = document.getElementById('theme-' + t);
+    if (!btn) return;
+    btn.classList.toggle('active', t === theme);
+    btn.setAttribute('aria-pressed', t === theme ? 'true' : 'false');
+  });
+
+  // Update Chart.js defaults and re-render all charts
+  if (!chartsAvailable) return;
+
+  setTimeout(() => {
+    const gridColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--chart-grid').trim();
+    const textColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--chart-text').trim();
+
+    Chart.defaults.color = textColor;
+
+    Object.values(Chart.instances).forEach(chart => {
+      if (chart.options.scales) {
+        Object.values(chart.options.scales).forEach(scale => {
+          if (scale.grid) scale.grid.color = gridColor;
+          if (scale.ticks) scale.ticks.color = textColor;
+          if (scale.title) scale.title.color = textColor;
+        });
+      }
+      if (chart.options.plugins?.legend?.labels) {
+        chart.options.plugins.legend.labels.color = textColor;
+      }
+      chart.update('none'); // 'none' = no animation for instant feel
+    });
+  }, 50);
+}
+
+// Init from localStorage or default dark
+const savedTheme = localStorage.getItem('d311-theme') || 'dark';
+applyTheme(savedTheme);
+
+THEMES.forEach(t => {
+  document.getElementById('theme-' + t)?.addEventListener('click', () => applyTheme(t));
+});
+
+/* ============================================================
+   LIVE CLOCK
+============================================================ */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent = now.toLocaleTimeString('en-US', { hour12:false });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ============================================================
+   CHART DEFAULTS
+============================================================ */
+if (chartsAvailable) {
+  Chart.defaults.color = C.text;
+  Chart.defaults.font.family = "'Fira Code', monospace";
+  Chart.defaults.font.size = 10;
+}
+
+/* ============================================================
+   ROC CURVE CHART (simulated)
+============================================================ */
+function buildRocData(auc) {
+  // Simple parametric approximation for visual demo
+  const pts = 30;
+  const data = [];
+  for (let i = 0; i <= pts; i++) {
+    const fpr = i / pts;
+    const tpr = Math.min(1, Math.pow(fpr, 1 - auc) + auc * Math.sin(fpr * Math.PI / 2) * 0.3 + auc * fpr);
+    data.push({ x: parseFloat(fpr.toFixed(3)), y: parseFloat(Math.min(1, tpr).toFixed(3)) });
+  }
+  return data;
+}
+
+let rocChart = null;
+if (chartsAvailable) {
+  const initialRocDatasets = MODELS.length
+    ? [
+        {
+          label: `LR (AUC=${MODELS[0].auc})`,
+          data: buildRocData(MODELS[0].auc),
+          borderColor: C.purple, backgroundColor: 'transparent',
+          borderWidth: 1.5, pointRadius: 0, tension: 0.4,
+        },
+        {
+          label: `RF (AUC=${MODELS[1].auc})`,
+          data: buildRocData(MODELS[1].auc),
+          borderColor: C.amber, backgroundColor: 'transparent',
+          borderWidth: 1.5, pointRadius: 0, tension: 0.4,
+        },
+        {
+          label: `XGBoost (AUC=${MODELS[2].auc})`,
+          data: buildRocData(MODELS[2].auc),
+          borderColor: C.green, backgroundColor: 'rgba(16,185,129,0.08)',
+          borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true,
+        },
+      ]
+    : [];
+
+  rocChart = new Chart(document.getElementById('chart-roc'), {
+    type: 'line',
+    data: {
+      datasets: [
+        ...initialRocDatasets,
+        {
+          label: 'Random Baseline',
+          data: [{x:0,y:0},{x:1,y:1}],
+          borderColor: 'rgba(148,163,184,0.3)', borderDash: [4,4],
+          borderWidth: 1, pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      parsing: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { position:'bottom', labels:{ boxWidth:10, padding:12 } },
+        tooltip: { callbacks: { title: ctx => `FPR: ${ctx[0].parsed.x}`, label: ctx => `${ctx.dataset.label}: TPR=${ctx.parsed.y}` } },
+      },
+      scales: {
+        x: { type:'linear', title:{ display:true, text:'False Positive Rate' }, grid:{ color:C.grid }, min:0, max:1, ticks:{ maxTicksLimit:6 } },
+        y: { title:{ display:true, text:'True Positive Rate' }, grid:{ color:C.grid }, min:0, max:1, ticks:{ maxTicksLimit:6 } },
+      },
+    },
+  });
+}
+
+/* ============================================================
+   ACCURACY RADAR / DOUGHNUT
+============================================================ */
+let accChart = null;
+if (chartsAvailable) {
+  accChart = new Chart(document.getElementById('chart-acc'), {
+    type: 'doughnut',
+    data: {
+      labels: MODELS.map(m => m.name),
+      datasets: [{
+        data: MODELS.map(m => (m.acc * 100).toFixed(1)),
+        backgroundColor: [C.purple, C.amber, C.green],
+        borderColor: '#0D1526',
+        borderWidth: 3,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position:'bottom', labels:{ boxWidth:10, padding:12 } },
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}% acc` } },
+      },
+    },
+  });
+}
+
+/* ============================================================
+   MODEL TABLE
+============================================================ */
+const rankLabels = ['', 'rank-1', 'rank-2', 'rank-3'];
+const rankTexts  = ['', '#1 Best', '#2', '#3'];
+const barColors  = [C.purple, C.amber, C.green];
+
+function pct(v) { return (v * 100).toFixed(1) + '%'; }
+
+const tbody = document.getElementById('model-table-body');
+[...MODELS].sort((a,b) => a.rank - b.rank).forEach((m, i) => {
+  const color = barColors[m.rank - 1];
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><span class="model-name">${m.name}</span></td>
+    <td>
+      <div class="metric-bar-wrap">
+        <div class="metric-bar"><div class="metric-bar__fill" style="width:${m.auc*100}%;background:${color};"></div></div>
+        <span style="font-family:var(--font-heading);font-size:11px;color:var(--text-code);min-width:40px;">${m.auc}</span>
+      </div>
+    </td>
+    <td>${pct(m.acc)}</td>
+    <td>${pct(m.prec)}</td>
+    <td>${pct(m.rec)}</td>
+    <td>${pct(m.f1)}</td>
+    <td style="font-family:var(--font-heading);font-size:11px;color:var(--text-muted);">${m.time}</td>
+    <td><span class="badge-rank ${rankLabels[m.rank]}">${rankTexts[m.rank]}</span></td>
+  `;
+  tbody.appendChild(row);
+});
+if (!MODELS.length) {
+  const emptyRow = document.createElement('tr');
+  emptyRow.innerHTML = '<td colspan="8" style="padding:18px;color:var(--text-muted);text-align:center;">Run the pipeline or open the dashboard through Flask to load saved model results.</td>';
+  tbody.appendChild(emptyRow);
+}
+
+/* ============================================================
+   LASSO COEFFICIENT CHART
+============================================================ */
+let coefChart = null;
+if (chartsAvailable) {
+  coefChart = new Chart(document.getElementById('chart-coef'), {
+    type: 'bar',
+    data: {
+      labels: LASSO_COEFS.map(d => d.feature),
+      datasets: [{
+        label: 'LASSO Coefficient',
+        data: LASSO_COEFS.map(d => d.coef),
+        backgroundColor: LASSO_COEFS.map(d => d.coef >= 0 ? 'rgba(59,130,246,0.55)' : 'rgba(239,68,68,0.55)'),
+        borderColor: LASSO_COEFS.map(d => d.coef >= 0 ? C.blue : C.red),
+        borderWidth: 1,
+        borderRadius: 2,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend:{ display:false } },
+      scales: {
+        x: { grid:{ color:C.grid } },
+        y: { grid:{ display:false }, ticks:{ font:{ size:9 } } },
+      },
+    },
+  });
+}
+
+/* ============================================================
+   FEATURE IMPORTANCE LIST
+============================================================ */
+const featContainer = document.getElementById('feat-list');
+const maxScore = Math.max(...FEATURES.map(f => f.score), 0.001);
+FEATURES.forEach(f => {
+  const div = document.createElement('div');
+  div.className = 'feat-row';
+  div.innerHTML = `
+    <span class="feat-name" title="${f.name}">${f.name}</span>
+    <div class="feat-bar"><div class="feat-bar__fill" style="width:${(f.score/maxScore*100).toFixed(1)}%"></div></div>
+    <span class="feat-score">${(f.score).toFixed(3)}</span>
+  `;
+  featContainer.appendChild(div);
+});
+if (!FEATURES.length) {
+  const emptyFeature = document.createElement('div');
+  emptyFeature.className = 'feat-row';
+  emptyFeature.innerHTML = `
+    <span class="feat-name">Awaiting saved run</span>
+    <div class="feat-bar"><div class="feat-bar__fill" style="width:0%"></div></div>
+    <span class="feat-score">—</span>
+  `;
+  featContainer.appendChild(emptyFeature);
+}
+
+/* ============================================================
+   LOG CONSOLE
+============================================================ */
+const logConsole = document.getElementById('log-console');
+const trackerOverlay = document.getElementById('tracker-overlay');
+const trackerDataset = document.getElementById('tracker-dataset');
+const trackerStatusPill = document.getElementById('tracker-status-pill');
+const trackerProgressLabel = document.getElementById('tracker-progress-label');
+const trackerProgressBar = document.getElementById('tracker-progress-bar');
+const trackerCurrentPhase = document.getElementById('tracker-current-phase');
+const trackerRunState = document.getElementById('tracker-run-state');
+const trackerError = document.getElementById('tracker-error');
+const trackerPhaseList = document.getElementById('tracker-phase-list');
+const trackerOpenButton = document.getElementById('btn-open-tracker');
+const trackerOpenPrimary = document.getElementById('btn-open-tracker-primary');
+const trackerCloseButton = document.getElementById('btn-close-tracker');
+const lastCaseStatus = document.getElementById('last-case-status');
+const lastCaseEmpty = document.getElementById('last-case-empty');
+const lastCaseContent = document.getElementById('last-case-content');
+const lastCaseTitle = document.getElementById('last-case-title');
+const lastCaseMeta = document.getElementById('last-case-meta');
+const lastCasePill = document.getElementById('last-case-pill');
+const lastCaseCreated = document.getElementById('last-case-created');
+const lastCaseDepartment = document.getElementById('last-case-department');
+const lastCasePriority = document.getElementById('last-case-priority');
+const lastCaseMethod = document.getElementById('last-case-method');
+const lastCaseDistrict = document.getElementById('last-case-district');
+const lastCaseResponse = document.getElementById('last-case-response');
+const lastCaseErt = document.getElementById('last-case-ert');
+const lastCaseDue = document.getElementById('last-case-due');
+const regGrid = document.getElementById('reg-grid');
+const regSummaryNote = document.getElementById('reg-summary-note');
+const coefChartTitle = document.getElementById('coef-chart-title');
+const featuresModelBadge = document.getElementById('features-model-badge');
+const agentList = document.getElementById('agent-list');
+const pipelineTimeline = document.getElementById('pipeline-timeline');
+
+const TRACKER_PHASES = [
+  {
+    agent: 'DataPrepAgent',
+    title: 'Phase 1 · Data Prep',
+    detail: 'Load the uploaded CSV, drop unused columns, and prepare the training sample.',
+    panelDetail: 'Load, clean, and prepare the training sample.',
+  },
+  {
+    agent: 'TransformationAgent',
+    title: 'Phase 2 · Transformation',
+    detail: 'Parse dates, engineer response-time features, and create the binary target.',
+    panelDetail: 'Engineer time features, encode fields, and prepare the split.',
+  },
+  {
+    agent: 'DiagnosticsAgent',
+    title: 'Phase 3 · Diagnostics',
+    detail: 'Run normality and class-balance checks before model training continues.',
+    panelDetail: 'Check balance, skew, and validation diagnostics.',
+  },
+  {
+    agent: 'ModelSelectionAgent',
+    title: 'Phase 4 · Model Selection',
+    detail: 'Train Logistic Regression, Random Forest, and XGBoost to pick the leader.',
+    panelDetail: 'Train and compare Logistic Regression, Random Forest, and XGBoost.',
+  },
+  {
+    agent: 'RegularizationAgent',
+    title: 'Phase 5 · Regularization',
+    detail: 'Compare Ridge, LASSO, and ElasticNet before finalizing the best result.',
+    panelDetail: 'Score Ridge, LASSO, and ElasticNet for the final selection.',
+  },
+];
+
+const AGENT_IDS = Object.fromEntries(TRACKER_PHASES.map((phase, index) => [phase.agent, index]));
+const REGULARIZATION_METHODS = [
+  { key: 'Ridge', label: 'Ridge (L2)' },
+  { key: 'LASSO', label: 'LASSO (L1)' },
+  { key: 'ElasticNet', label: 'ElasticNet' },
+];
+
+function formatDisplayValue(value, fallback = '—') {
+  return value === null || value === undefined || value === '' ? fallback : String(value);
+}
+
+function formatDisplayDate(value, fallback = '—') {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatNumericDisplay(value, suffix = '', fallback = '—') {
+  if (value === null || value === undefined || value === '') return fallback;
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return fallback;
+  return `${numeric.toFixed(2)}${suffix}`;
+}
+
+function formatCountDisplay(value, fallback = '—') {
+  if (value === null || value === undefined || value === '') return fallback;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.round(numeric).toLocaleString('en-US');
+}
+
+function renderRegularizationCards(reg = null) {
+  if (!regGrid) return;
+
+  const allResults = reg?.all_results || {};
+  const bestMethod = reg?.best_method || '';
+  regGrid.innerHTML = '';
+
+  regSummaryNote.textContent = bestMethod
+    ? `Best method: ${bestMethod} | ROC-AUC ${Number(reg.best_roc_auc || 0).toFixed(4)}`
+    : 'Awaiting saved run';
+  coefChartTitle.textContent = bestMethod
+    ? `Top ${bestMethod} Coefficients`
+    : 'Top Regularization Coefficients';
+
+  REGULARIZATION_METHODS.forEach(method => {
+    const result = allResults[method.key] || null;
+    const card = document.createElement('div');
+    card.className = `reg-card${bestMethod === method.key ? ' best-reg' : ''}`;
+    const alphaValue = result?.best_alpha ?? '—';
+    const aucValue = result?.roc_auc != null ? Number(result.roc_auc).toFixed(4) : '—';
+    const helperLabel = bestMethod === method.key ? 'Best Method' : 'ROC-AUC';
+    const helperColor = bestMethod === method.key ? 'var(--success)' : 'var(--text-muted)';
+
+    card.innerHTML = `
+      <div class="reg-card__method">${method.label}${bestMethod === method.key ? ' ★' : ''}</div>
+      <div class="reg-card__alpha">Best α: <span>${alphaValue}</span></div>
+      <div class="reg-auc">${aucValue}</div>
+      <div style="font-size:10px;color:${helperColor};margin-top:4px;">${helperLabel}</div>
+    `;
+    regGrid.appendChild(card);
+  });
+}
+
+function renderAgentPanel() {
+  if (!agentList) return;
+
+  agentList.innerHTML = '';
+  TRACKER_PHASES.forEach(phase => {
+    const item = document.createElement('div');
+    item.className = 'agent-item';
+    item.innerHTML = `
+      <div class="agent-indicator indicator-idle" aria-label="Idle"></div>
+      <div class="agent-info">
+        <div class="agent-info__name">${phase.agent}</div>
+        <div class="agent-info__desc">${phase.panelDetail || phase.detail}</div>
+      </div>
+      <span class="agent-status-tag tag-idle">IDLE</span>
+    `;
+    agentList.appendChild(item);
+  });
+}
+
+function timelineNodeIcon(state) {
+  if (state === 'done') {
+    return '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+  }
+  return '<svg viewBox="0 0 24 24"><polyline points="5 3 19 12 5 21 5 3"/></svg>';
+}
+
+function renderPipelineTimeline(agents = {}) {
+  if (!pipelineTimeline) return;
+
+  pipelineTimeline.innerHTML = '';
+  TRACKER_PHASES.forEach(phase => {
+    const state = agents[phase.agent] || 'idle';
+    const nodeClass = state === 'done' ? 'done' : state === 'running' ? 'active' : state === 'error' ? 'error' : '';
+    const nameColor = state === 'running'
+      ? 'var(--primary-light)'
+      : state === 'done'
+        ? 'var(--success)'
+        : state === 'error'
+          ? 'var(--danger)'
+          : 'var(--text-primary)';
+
+    const step = document.createElement('div');
+    step.className = 'timeline-step';
+    step.innerHTML = `
+      <div class="timeline-step__track">
+        <div class="timeline-step__node ${nodeClass}">
+          ${timelineNodeIcon(state)}
+        </div>
+        <div class="timeline-step__line"></div>
+      </div>
+      <div class="timeline-step__content">
+        <div class="timeline-step__name" style="color:${nameColor};">${phase.title}</div>
+        <div class="timeline-step__detail">${phase.detail}</div>
+      </div>
+    `;
+    pipelineTimeline.appendChild(step);
+  });
+}
+
+function renderLastTrainedCase(caseData, finishedAt = null) {
+  if (!caseData) {
+    lastCaseStatus.textContent = 'Awaiting successful run';
+    lastCaseEmpty.hidden = false;
+    lastCaseContent.hidden = true;
+    lastCasePill.className = 'last-case-pill';
+    lastCasePill.textContent = 'Target —';
+    return;
+  }
+
+  const departmentName = formatDisplayValue(caseData.department_grouped || caseData.department);
+  const runLabel = finishedAt ? formatDisplayDate(finishedAt) : 'Latest successful run';
+  const targetClass = caseData.target_class;
+
+  lastCaseStatus.textContent = finishedAt ? `Last run: ${formatDisplayDate(finishedAt)}` : 'Loaded from previous run';
+  lastCaseEmpty.hidden = true;
+  lastCaseContent.hidden = false;
+  lastCaseTitle.textContent = formatDisplayValue(caseData.service_request_type, 'Training sample case');
+  lastCaseMeta.textContent = `${departmentName} | ${runLabel}`;
+
+  lastCasePill.className = 'last-case-pill';
+  if (targetClass === 1) lastCasePill.classList.add('is-class-1');
+  if (targetClass === 0) lastCasePill.classList.add('is-class-0');
+  lastCasePill.textContent = targetClass === null || targetClass === undefined ? 'Target —' : `Target Class ${targetClass}`;
+
+  lastCaseCreated.textContent = formatDisplayDate(caseData.created_date);
+  lastCaseDepartment.textContent = formatDisplayValue(caseData.department || caseData.department_grouped);
+  lastCasePriority.textContent = formatDisplayValue(caseData.priority);
+  lastCaseMethod.textContent = formatDisplayValue(caseData.method_received_description);
+  lastCaseDistrict.textContent = formatDisplayValue(caseData.city_council_district);
+  lastCaseResponse.textContent = formatNumericDisplay(caseData.days_to_close_hours, ' hrs');
+  lastCaseErt.textContent = formatNumericDisplay(caseData.ert_days, ' days');
+  lastCaseDue.textContent = formatDisplayValue(caseData.overall_due_date);
+}
+
+function formatDatasetLabel(path) {
+  if (!path) return 'No dataset selected';
+  const parts = String(path).split(/[\\\/]/);
+  return parts[parts.length - 1] || String(path);
+}
+
+function stashDashboardBootstrap(payload, targetWindow = window) {
+  if (!payload) return;
+
+  try {
+    targetWindow.sessionStorage.setItem(
+      DASHBOARD_BOOTSTRAP_STORAGE_KEY,
+      JSON.stringify(payload),
+    );
+  } catch (_) {
+    // Ignore session storage failures and fall back to the server bootstrap.
+  }
+}
+
+function readDashboardBootstrap() {
+  if (window.__dashboardBootstrapCache) {
+    return window.__dashboardBootstrapCache;
+  }
+
+  const bootstrapEl = document.getElementById('dashboard-bootstrap');
+  if (!bootstrapEl) return null;
+
+  const rawPayload = bootstrapEl.textContent?.trim();
+  if (!rawPayload || rawPayload === 'null') return null;
+
+  try {
+    return JSON.parse(rawPayload);
+  } catch (error) {
+    console.warn('Unable to parse dashboard bootstrap payload.', error);
+    return null;
+  }
+}
+
+function trackerPhaseMeta(state) {
+  return {
+    idle: { badge: 'IDLE', fill: '0%', fillColor: 'var(--text-muted)' },
+    running: { badge: 'RUNNING', fill: '66%', fillColor: 'var(--primary-light)' },
+    done: { badge: 'DONE', fill: '100%', fillColor: 'var(--success)' },
+    error: { badge: 'ERROR', fill: '100%', fillColor: 'var(--danger)' },
+  }[state] || { badge: 'IDLE', fill: '0%', fillColor: 'var(--text-muted)' };
+}
+
+function renderTrackerPhases() {
+  trackerPhaseList.innerHTML = '';
+  TRACKER_PHASES.forEach(phase => {
+    const card = document.createElement('article');
+    card.className = 'tracker-phase-card is-idle';
+    card.dataset.agent = phase.agent;
+    card.innerHTML = `
+      <div class="tracker-phase-card__head">
+        <div class="tracker-phase-card__title">${phase.title}</div>
+        <span class="tracker-phase-card__badge is-idle">IDLE</span>
+      </div>
+      <div class="tracker-phase-card__detail">${phase.detail}</div>
+      <div class="tracker-phase-card__meter">
+        <div class="tracker-phase-card__fill" style="width:0%;"></div>
+      </div>
+    `;
+    trackerPhaseList.appendChild(card);
+  });
+}
+
+function updateTrackerPhaseCard(agentName, state) {
+  const card = trackerPhaseList.querySelector(`[data-agent="${agentName}"]`);
+  if (!card) return;
+
+  const meta = trackerPhaseMeta(state);
+  const badge = card.querySelector('.tracker-phase-card__badge');
+  const fill = card.querySelector('.tracker-phase-card__fill');
+
+  card.className = `tracker-phase-card is-${state}`;
+  badge.className = `tracker-phase-card__badge is-${state}`;
+  badge.textContent = meta.badge;
+  fill.style.width = meta.fill;
+  fill.style.background = meta.fillColor;
+}
+
+function deriveCurrentPhase(status, agents) {
+  const running = TRACKER_PHASES.find(phase => agents[phase.agent] === 'running');
+  if (running) return `${running.title} in progress`;
+
+  const failed = TRACKER_PHASES.find(phase => agents[phase.agent] === 'error');
+  if (failed) return `${failed.title} needs attention`;
+
+  if (status === 'done') return 'All phases completed successfully.';
+  if (status === 'error') return 'Run stopped before the pipeline could finish.';
+
+  const completed = TRACKER_PHASES.filter(phase => agents[phase.agent] === 'done').length;
+  if (completed > 0 && completed < TRACKER_PHASES.length) {
+    return `Completed ${completed} of ${TRACKER_PHASES.length} phases.`;
+  }
+  return 'Awaiting pipeline start.';
+}
+
+function updateTrackerState(data = {}) {
+  const status = data.status || 'idle';
+  const progress = Number.isFinite(data.progress) ? data.progress : (status === 'done' ? 100 : 0);
+  const agents = data.agents || {};
+  const dataset = data.data_path
+    || (typeof currentDataPath !== 'undefined' ? currentDataPath : null)
+    || document.getElementById('header-dataset-name')?.textContent;
+
+  trackerDataset.textContent = formatDatasetLabel(dataset);
+  trackerStatusPill.className = `tracker-status tracker-status--${status}`;
+  trackerStatusPill.textContent = status.toUpperCase();
+  trackerProgressLabel.textContent = `${progress}%`;
+  trackerProgressBar.style.width = `${progress}%`;
+  trackerCurrentPhase.textContent = deriveCurrentPhase(status, agents);
+  trackerRunState.textContent =
+    status === 'running'
+      ? 'Tracker is following the live background run.'
+      : status === 'done'
+        ? 'Latest run finished. You can keep this window open to review the logs.'
+        : status === 'error'
+          ? 'The run stopped with an error. Review the logs and phase states below.'
+          : 'The tracker will update as soon as a new run begins.';
+
+  TRACKER_PHASES.forEach(phase => {
+    updateTrackerPhaseCard(phase.agent, agents[phase.agent] || 'idle');
+    setAgentUI(phase.agent, agents[phase.agent] || 'idle');
+  });
+  renderPipelineTimeline(agents);
+
+  if (data.error) {
+    trackerError.hidden = false;
+    trackerError.textContent = data.error;
+  } else {
+    trackerError.hidden = true;
+    trackerError.textContent = '';
+  }
+}
+
+function appendLog(entry) {
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `
+    <span class="log-time">${entry.t}</span>
+    <span class="log-tag ${entry.tag}">${entry.tag}</span>
+    <span class="log-msg">${entry.msg}</span>
+  `;
+  logConsole.appendChild(line);
+  logConsole.scrollTop = logConsole.scrollHeight;
+}
+
+// Simulate streaming logs on load
+let logIdx = 0;
+function streamLogs() {
+  if (logIdx < LOGS.length) {
+    appendLog(LOGS[logIdx++]);
+    setTimeout(streamLogs, 180);
+  }
+}
+setTimeout(streamLogs, 600);
+
+document.getElementById('btn-clear-logs').addEventListener('click', () => {
+  logConsole.innerHTML = '';
+  logIdx = 0;
+});
+
+renderRegularizationCards();
+renderAgentPanel();
+renderPipelineTimeline();
+renderTrackerPhases();
+updateTrackerState();
+
+/* ============================================================
+   SIDEBAR ACTIVE STATE
+============================================================ */
+const sidebarItems = document.querySelectorAll('.sidebar__item');
+
+function setActiveSidebarItem(itemId) {
+  sidebarItems.forEach(i => i.classList.remove('active'));
+  const targetItem = document.getElementById(itemId);
+  if (targetItem) targetItem.classList.add('active');
+}
+
+function showProgressTracker() {
+  setActiveSidebarItem('nav-logs');
+  trackerOverlay.classList.add('open');
+  document.body.classList.add('modal-open');
+}
+
+function hideProgressTracker() {
+  trackerOverlay.classList.remove('open');
+  document.body.classList.remove('modal-open');
+}
+
+sidebarItems.forEach(item => {
+  item.addEventListener('click', function(event) {
+    if (this.id === 'nav-logs') {
+      event.preventDefault();
+      showProgressTracker();
+      return;
+    }
+    setActiveSidebarItem(this.id);
+  });
+});
+
+/* ============================================================
+   REFRESH BUTTON ANIMATION
+============================================================ */
+document.getElementById('btn-refresh').addEventListener('click', function() {
+  const icon = this.querySelector('svg');
+  icon.style.transition = 'transform 0.5s ease';
+  icon.style.transform = 'rotate(360deg)';
+  setTimeout(() => { icon.style.transform = ''; icon.style.transition = ''; }, 500);
+});
+
+/* ============================================================
+   RUN PIPELINE BUTTON  (Flask API)
+============================================================ */
+const runBtn   = document.getElementById('btn-run');
+const saveDashboardMainBtn = document.getElementById('btn-save-dashboard-main');
+const BASE_URL = '';  // same origin when served by Flask
+const DASHBOARD_BOOTSTRAP_STORAGE_KEY = 'dashboard-bootstrap-cache';
+saveDashboardMainBtn.addEventListener('click', saveDashboardAndRefresh);
+
+/* ============================================================
+   DATA CONFIG & UPLOAD LOGIC
+============================================================ */
+let currentDataPath = null;
+let pipelineTestWindow = null;
+const modalOverlay = document.getElementById('modal-data-overlay');
+const serverDataOptions = document.getElementById('server-data-options');
+const fileInput = document.getElementById('file-input');
+const uploadTrigger = document.getElementById('upload-trigger');
+const uploadStatus = document.getElementById('upload-status');
+const modalSaveBtn = document.getElementById('btn-modal-save');
+const headerChangeDataButton = document.getElementById('header-change-data');
+
+async function showModal() {
+  modalOverlay.classList.add('open');
+  document.body.classList.add('modal-open');
+  await fetchConfig();
+}
+
+function hideModal() {
+  modalOverlay.classList.remove('open');
+  document.body.classList.remove('modal-open');
+}
+
+function buildPipelineTesterUrl(launchMode = 'same-tab') {
+  const popupUrl = new URL('/pipeline-tester', window.location.origin);
+  popupUrl.searchParams.set('launch', launchMode);
+  popupUrl.searchParams.set('return_to', window.location.href);
+
+  if (currentDataPath) {
+    popupUrl.searchParams.set('data_path', currentDataPath);
+  }
+
+  return popupUrl;
+}
+
+function syncHeaderChangeLink() {
+  if (!headerChangeDataButton) return;
+  headerChangeDataButton.setAttribute('href', buildPipelineTesterUrl('same-tab').toString());
+}
+
+function openPipelineTestPopup() {
+  const sameTabUrl = buildPipelineTesterUrl('same-tab');
+  window.location.assign(sameTabUrl.toString());
+}
+
+function setUploadStatus(message, color) {
+  uploadStatus.style.display = 'block';
+  uploadStatus.textContent = message;
+  uploadStatus.style.color = color;
+}
+
+function renderEmptyDatasetState(title, detail) {
+  serverDataOptions.innerHTML = '';
+
+  const emptyCard = document.createElement('div');
+  emptyCard.className = 'data-option data-option--empty';
+
+  const titleEl = document.createElement('span');
+  titleEl.className = 'data-option__title';
+  titleEl.textContent = title;
+
+  const detailEl = document.createElement('span');
+  detailEl.className = 'data-option__path';
+  detailEl.textContent = detail;
+
+  emptyCard.append(titleEl, detailEl);
+  serverDataOptions.appendChild(emptyCard);
+}
+
+function renderDatasetOptions(datasets, selectedPath = '') {
+  serverDataOptions.innerHTML = '';
+
+  if (!datasets.length) {
+    renderEmptyDatasetState('No CSV files found yet.', 'Upload one below or add a CSV to the project root.');
+    return;
+  }
+
+  datasets.forEach(dataset => {
+    const option = document.createElement('div');
+    option.className = 'data-option';
+    option.dataset.path = dataset.path || '';
+
+    const title = document.createElement('span');
+    title.className = 'data-option__title';
+    title.textContent = dataset.filename || 'Dataset';
+
+    const meta = document.createElement('span');
+    meta.className = 'data-option__meta';
+    meta.textContent = dataset.source || 'CSV';
+
+    const pathEl = document.createElement('span');
+    pathEl.className = 'data-option__path';
+    pathEl.textContent = dataset.path || '';
+
+    if (selectedPath && dataset.path === selectedPath) {
+      option.classList.add('selected');
+    }
+
+    option.append(title, meta, pathEl);
+    serverDataOptions.appendChild(option);
+  });
+}
+
+async function fetchConfig() {
+  try {
+    const res = await fetch(BASE_URL + '/api/config');
+    if (!res.ok) {
+      renderEmptyDatasetState('Unable to load datasets.', 'The dashboard could not reach /api/config.');
+      return null;
+    }
+
+    const cfg = await res.json();
+    const availableDatasets = Array.isArray(cfg.available_datasets) ? cfg.available_datasets : [];
+    const preferredPath = currentDataPath || cfg.recommended_data_path || availableDatasets[0]?.path || '';
+    const selectedPath = availableDatasets.some(dataset => dataset.path === preferredPath)
+      ? preferredPath
+      : '';
+
+    renderDatasetOptions(availableDatasets, selectedPath);
+
+    if (preferredPath) {
+      currentDataPath = preferredPath;
+      updateDatasetDisplay(preferredPath);
+    }
+
+    return cfg;
+  } catch (e) {
+    console.error('Config fetch failed', e);
+    renderEmptyDatasetState('Unable to load datasets.', 'Check the Flask app and refresh the page.');
+    return null;
+  }
+}
+
+function updateDatasetDisplay(path) {
+  if (!path) return;
+  const parts = path.split(/[\\/]/);
+  const name = parts[parts.length - 1];
+  document.getElementById('header-dataset-name').textContent = name;
+  document.getElementById('sidebar-data-status').textContent = name.length > 10 ? name.substring(0,8)+'...' : name;
+  trackerDataset.textContent = name;
+  syncHeaderChangeLink();
+}
+
+function setDashboardSaveButtonEnabled(isEnabled, label = 'Save & Refresh') {
+  saveDashboardMainBtn.disabled = !isEnabled;
+  saveDashboardMainBtn.innerHTML = `
+    <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    ${label}
+  `;
+}
+
+function selectData(path, selectedElement = null) {
+  if (!path) return;
+  currentDataPath = path;
+  updateDatasetDisplay(path);
+  serverDataOptions.querySelectorAll('.data-option').forEach(el => el.classList.remove('selected'));
+  uploadTrigger.classList.remove('selected');
+  const option = selectedElement
+    || Array.from(serverDataOptions.querySelectorAll('.data-option')).find(el => el.dataset.path === path);
+  if (option) option.classList.add('selected');
+  uploadStatus.style.display = 'none';
+}
+
+serverDataOptions.addEventListener('click', event => {
+  const option = event.target.closest('.data-option[data-path]');
+  if (!option) return;
+  selectData(option.dataset.path, option);
+});
+
+uploadTrigger.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', async function() {
+  if (!this.files.length) return;
+  const file = this.files[0];
+
+  setUploadStatus(`Uploading ${file.name}...`, 'var(--text-secondary)');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(BASE_URL + '/api/upload', { method:'POST', body: formData });
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+
+    currentDataPath = data.path;
+    updateDatasetDisplay(data.path);
+    await fetchConfig();
+    selectData(data.path);
+    setUploadStatus(`Uploaded: ${data.filename}`, 'var(--success)');
+  } catch (e) {
+    uploadTrigger.classList.remove('selected');
+    setUploadStatus(`Error: ${e.message}`, 'var(--danger)');
+  }
+});
+
+document.getElementById('nav-data-config').addEventListener('click', event => {
+  event.preventDefault();
+  showModal();
+});
+headerChangeDataButton.addEventListener('click', event => {
+  event.preventDefault();
+  openPipelineTestPopup();
+});
+document.getElementById('btn-modal-close').addEventListener('click', hideModal);
+modalOverlay.addEventListener('click', event => {
+  if (event.target === modalOverlay) hideModal();
+});
+trackerOpenButton.addEventListener('click', showProgressTracker);
+trackerOpenPrimary.addEventListener('click', showProgressTracker);
+trackerCloseButton.addEventListener('click', hideProgressTracker);
+trackerOverlay.addEventListener('click', event => {
+  if (event.target === trackerOverlay) hideProgressTracker();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    if (trackerOverlay.classList.contains('open')) hideProgressTracker();
+    if (modalOverlay.classList.contains('open')) hideModal();
+  }
+});
+modalSaveBtn.addEventListener('click', async () => {
+  if (!currentDataPath) {
+    setUploadStatus('Choose or upload a CSV before running the pipeline.', 'var(--danger)');
+    return;
+  }
+
+  hideModal();
+  runBtn.click();
+});
+
+window.addEventListener('message', event => {
+  if (event.origin !== window.location.origin) return;
+
+  const payload = event.data || {};
+  if (payload.source !== 'pipeline-popup') return;
+
+  if (payload.dataPath) {
+    currentDataPath = payload.dataPath;
+    updateDatasetDisplay(payload.dataPath);
+  }
+
+  if (payload.type === 'pipeline-started') {
+    logConsole.innerHTML = '';
+    _knownLogs = 0;
+    setDashboardSaveButtonEnabled(false);
+    updateTrackerState({
+      status: 'running',
+      progress: 0,
+      data_path: payload.dataPath || currentDataPath,
+      agents: Object.fromEntries(TRACKER_PHASES.map(phase => [phase.agent, 'idle'])),
+    });
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running...';
+    clearTimeout(_pollTimer);
+    _pollTimer = setTimeout(pollStatus, 800);
+  }
+
+  if (payload.results) {
+    stashDashboardBootstrap({
+      status: payload.status || 'done',
+      data_path: payload.results.data_path || payload.dataPath || currentDataPath,
+      finished_at: payload.results.finished_at || null,
+      results: payload.results,
+    });
+  }
+
+  if (payload.type === 'pipeline-saved' && payload.results) {
+    restoreDashboardResults(payload.results, 'Saved dashboard results received from the pipeline tester.');
+    return;
+  }
+
+  if (payload.type === 'pipeline-finished' || payload.type === 'pipeline-results') {
+    clearTimeout(_pollTimer);
+    _pollTimer = setTimeout(pollStatus, 200);
+  }
+});
+
+syncHeaderChangeLink();
+fetchConfig();
+
+// ── Helper: update agent indicator + tag in sidebar panel ──────────────────
+function setAgentUI(name, state) {
+  const items  = agentList.querySelectorAll('.agent-item');
+  const idx    = AGENT_IDS[name];
+  if (idx === undefined || !items[idx]) return;
+  const dot    = items[idx].querySelector('.agent-indicator');
+  const tag    = items[idx].querySelector('.agent-status-tag');
+  const states = {
+    idle:    { dot: 'indicator-idle',    cls: 'tag-idle',    txt: 'IDLE'    },
+    running: { dot: 'indicator-running', cls: 'tag-running', txt: 'RUNNING' },
+    done:    { dot: 'indicator-done',    cls: 'tag-done',    txt: 'DONE'    },
+    error:   { dot: 'indicator-warn',    cls: 'tag-warn',    txt: 'ERROR'   },
+  };
+  const s = states[state] || states.idle;
+  dot.className = `agent-indicator ${s.dot}`;
+  tag.className = `agent-status-tag ${s.cls}`;
+  tag.textContent = s.txt;
+}
+
+// ── Helper: populate all charts + KPIs from real results ───────────────────
+function populateFromResults(r) {
+  if (!r) return;
+
+  if (r.data_path) {
+    currentDataPath = r.data_path;
+    updateDatasetDisplay(r.data_path);
+  }
+
+  setDashboardSaveButtonEnabled(true);
+
+  // -- KPI strip ---
+  const reg    = r.regularization || {};
+  const models = r.models || [];
+  const best   = models.find(m => m.Model === r.best_model) || models[0] || {};
+  const trainCount = Array.isArray(r.train_test) ? r.train_test[0] : null;
+  const testCount = Array.isArray(r.train_test) ? r.train_test[1] : null;
+  const modeledTotal = [trainCount, testCount].every(value => Number.isFinite(Number(value)))
+    ? Number(trainCount) + Number(testCount)
+    : null;
+  const rawTotal = Array.isArray(r.data_shape) ? r.data_shape[0] : null;
+  const bestModelLabel = best.Model || r.best_model || 'Saved run';
+
+  renderLastTrainedCase(r.last_trained_case || null, r.finished_at || null);
+  document.getElementById('kpi-auc').textContent  = (reg.best_roc_auc || best.ROC_AUC || '—').toFixed
+    ? (reg.best_roc_auc || best.ROC_AUC).toFixed(4) : '—';
+  document.getElementById('kpi-acc').textContent  = best.Accuracy
+    ? (best.Accuracy * 100).toFixed(1) + '%' : '—';
+  document.getElementById('kpi-auc-footer').textContent = `Best model: ${bestModelLabel}`;
+  document.getElementById('kpi-acc-footer').textContent = `Latest saved run | ${bestModelLabel}`;
+  document.getElementById('kpi-train-samples').textContent = formatCountDisplay(trainCount);
+
+  const sampleFooterParts = [];
+  if (testCount !== null && testCount !== undefined) {
+    sampleFooterParts.push(`${formatCountDisplay(testCount)} test`);
+  }
+  if (modeledTotal !== null) {
+    sampleFooterParts.push(`${formatCountDisplay(modeledTotal)} modeled rows`);
+  } else if (rawTotal !== null && rawTotal !== undefined) {
+    sampleFooterParts.push(`${formatCountDisplay(rawTotal)} total rows`);
+  }
+  document.getElementById('kpi-train-samples-footer').textContent =
+    sampleFooterParts.join(' | ') || 'Awaiting completed run';
+
+  document.getElementById('kpi-feat').textContent =
+    (r.feature_importance || []).length || '—';
+  document.getElementById('kpi-feat-footer').textContent =
+    modeledTotal !== null
+      ? `Top importances from ${formatCountDisplay(modeledTotal)} modeled rows`
+      : 'Feature importance from latest saved run';
+  featuresModelBadge.textContent = bestModelLabel;
+  renderRegularizationCards(reg);
+
+  // -- ROC chart ---
+  const palette = [C.purple, C.amber, C.green];
+  const newDatasets = [
+    ...models.map((m, i) => ({
+      label: `${m.Model} (AUC=${(m.ROC_AUC||0).toFixed(4)})`,
+      data:  buildRocData(m.ROC_AUC || 0.5),
+      borderColor: palette[i] || C.blue,
+      backgroundColor: i === models.length - 1 ? 'rgba(16,185,129,0.08)' : 'transparent',
+      borderWidth: i === models.length - 1 ? 2 : 1.5,
+      pointRadius: 0, tension: 0.4,
+      fill: i === models.length - 1,
+    })),
+    {
+      label: 'Random Baseline', data: [{x:0,y:0},{x:1,y:1}],
+      borderColor: 'rgba(148,163,184,0.3)', borderDash: [4,4],
+      borderWidth: 1, pointRadius: 0,
+    },
+  ];
+  if (rocChart) {
+    rocChart.data.datasets = newDatasets;
+    rocChart.update();
+  }
+
+  // -- Accuracy donut ---
+  if (accChart) {
+    accChart.data.labels   = models.map(m => m.Model);
+    accChart.data.datasets[0].data = models.map(m => ((m.Accuracy||0)*100).toFixed(1));
+    accChart.update();
+  }
+
+  // -- Model table ---
+  const tbody2 = document.getElementById('model-table-body');
+  tbody2.innerHTML = '';
+  const sorted = [...models].sort((a,b) => (b.ROC_AUC||0) - (a.ROC_AUC||0));
+  sorted.forEach((m, i) => {
+    const rank  = i + 1;
+    const color = palette[i] || C.blue;
+    const rankCls  = ['', 'rank-1', 'rank-2', 'rank-3'][rank] || '';
+    const rankTxt  = ['', '#1 Best', '#2', '#3'][rank] || `#${rank}`;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><span class="model-name">${m.Model}</span></td>
+      <td>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar"><div class="metric-bar__fill" style="width:${(m.ROC_AUC||0)*100}%;background:${color};"></div></div>
+          <span style="font-family:var(--font-heading);font-size:11px;color:var(--text-code);min-width:40px;">${(m.ROC_AUC||0).toFixed(4)}</span>
+        </div>
+      </td>
+      <td>${m.Accuracy  != null ? ((m.Accuracy )*100).toFixed(1)+'%' : '—'}</td>
+      <td>${m.Precision != null ? ((m.Precision)*100).toFixed(1)+'%' : '—'}</td>
+      <td>${m.Recall    != null ? ((m.Recall   )*100).toFixed(1)+'%' : '—'}</td>
+      <td>${m.F1        != null ? ((m.F1       )*100).toFixed(1)+'%' : '—'}</td>
+      <td style="font-family:var(--font-heading);font-size:11px;color:var(--text-muted);">—</td>
+      <td><span class="badge-rank ${rankCls}">${rankTxt}</span></td>
+    `;
+    tbody2.appendChild(row);
+  });
+
+  // -- Coef chart ---
+  const coefs = (reg.coef_summary || []).filter(c => c.Method === reg.best_method).slice(0, 10);
+  if (coefs.length && coefChart) {
+    coefChart.data.labels = coefs.map(c => c.Feature);
+    coefChart.data.datasets[0].data = coefs.map(c => c.Coefficient);
+    coefChart.data.datasets[0].backgroundColor = coefs.map(c => c.Coefficient >= 0 ? 'rgba(59,130,246,0.55)' : 'rgba(239,68,68,0.55)');
+    coefChart.data.datasets[0].borderColor      = coefs.map(c => c.Coefficient >= 0 ? C.blue : C.red);
+    coefChart.update();
+  }
+
+  // -- Feature importance ---
+  const featContainer2 = document.getElementById('feat-list');
+  featContainer2.innerHTML = '';
+  const feats   = r.feature_importance || [];
+  const maxFeat = Math.max(...feats.map(f => f.score), 0.001);
+  feats.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'feat-row';
+    div.innerHTML = `
+      <span class="feat-name" title="${f.name}">${f.name}</span>
+      <div class="feat-bar"><div class="feat-bar__fill" style="width:${(f.score/maxFeat*100).toFixed(1)}%"></div></div>
+      <span class="feat-score">${f.score.toFixed(3)}</span>
+    `;
+    featContainer2.appendChild(div);
+  });
+  if (!feats.length) {
+    const emptyFeature = document.createElement('div');
+    emptyFeature.className = 'feat-row';
+    emptyFeature.innerHTML = `
+      <span class="feat-name">No importance scores</span>
+      <div class="feat-bar"><div class="feat-bar__fill" style="width:0%"></div></div>
+      <span class="feat-score">—</span>
+    `;
+    featContainer2.appendChild(emptyFeature);
+  }
+
+  if (coefChart && !coefs.length) {
+    coefChart.data.labels = [];
+    coefChart.data.datasets[0].data = [];
+    coefChart.update();
+  }
+}
+
+// ── Polling ────────────────────────────────────────────────────────────────
+let _pollTimer  = null;
+let _knownLogs  = 0;
+
+async function pollStatus() {
+  try {
+    const resp = await fetch(BASE_URL + '/api/status');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    updateTrackerState(data);
+
+    // Agent indicators
+    Object.entries(data.agents || {}).forEach(([name, state]) => setAgentUI(name, state));
+
+    // Stream new log entries
+    const entries = data.logs || [];
+    entries.slice(_knownLogs).forEach(e => appendLog(e));
+    _knownLogs = entries.length;
+
+    if (data.status === 'running') {
+      // keep polling
+      _pollTimer = setTimeout(pollStatus, 1500);
+    } else {
+      // done or error — fetch results
+      clearTimeout(_pollTimer);
+      runBtn.disabled = false;
+      runBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run Pipeline`;
+
+      if (data.status === 'done') {
+        const rRes = await fetch(BASE_URL + '/api/results');
+        if (rRes.ok) populateFromResults(await rRes.json());
+      }
+    }
+  } catch (_) {
+    // server not reachable — stop polling silently
+    clearTimeout(_pollTimer);
+    runBtn.disabled = false;
+  }
+}
+
+function restoreDashboardResults(results, message = 'Previous run results restored.') {
+  if (!results) return false;
+
+  stashDashboardBootstrap({
+    status: 'done',
+    data_path: results.data_path || currentDataPath,
+    finished_at: results.finished_at || null,
+    results,
+  });
+
+  appendLog({
+    t: new Date().toLocaleTimeString('en-US', { hour12:false }),
+    tag: 'INFO',
+    msg: message,
+  });
+  updateTrackerState({
+    status: 'done',
+    progress: 100,
+    data_path: results.data_path || currentDataPath,
+    agents: Object.fromEntries(TRACKER_PHASES.map(phase => [phase.agent, 'done'])),
+  });
+  populateFromResults(results);
+  return true;
+}
+
+async function restoreLastRunOnLoad() {
+  const bootstrapped = readDashboardBootstrap();
+  if (restoreDashboardResults(bootstrapped?.results, 'Last successful run restored.')) {
+    return;
+  }
+
+  try {
+    const bootstrapResp = await fetch(BASE_URL + '/api/dashboard-bootstrap', { cache: 'no-store' });
+    if (bootstrapResp.ok) {
+      const bootstrapData = await bootstrapResp.json();
+      if (restoreDashboardResults(bootstrapData?.results, 'Latest saved dashboard restored.')) {
+        return;
+      }
+    }
+  } catch (_) {
+    // Fall through to results fetch below.
+  }
+
+  try {
+    const resp = await fetch(BASE_URL + '/api/results');
+    if (resp.ok) {
+      restoreDashboardResults(await resp.json(), 'Previous run results restored.');
+    }
+  } catch (_) {
+    /* server offline — demo mode, mock data already shown */
+  }
+}
+
+// ── Run button ─────────────────────────────────────────────────────────────
+async function saveDashboardAndRefresh() {
+  setDashboardSaveButtonEnabled(false, 'Saving...');
+
+  try {
+    const response = await fetch(BASE_URL + '/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data_path: currentDataPath }),
+      cache: 'no-store',
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Unable to save the dashboard.');
+
+    if (data.results) {
+      stashDashboardBootstrap({
+        status: 'done',
+        data_path: data.results.data_path || currentDataPath,
+        finished_at: data.results.finished_at || null,
+        results: data.results,
+      });
+      populateFromResults(data.results);
+    }
+
+    appendLog({
+      t: new Date().toLocaleTimeString('en-US', { hour12:false }),
+      tag: 'DONE',
+      msg: data.message || 'Dashboard snapshot saved.',
+    });
+
+    window.location.assign(data.dashboard_url || new URL('/', window.location.origin).toString());
+  } catch (error) {
+    appendLog({
+      t: new Date().toLocaleTimeString('en-US', { hour12:false }),
+      tag: 'ERR',
+      msg: error.message || 'Unable to save the dashboard.',
+    });
+    setDashboardSaveButtonEnabled(true);
+  }
+}
+
+runBtn.addEventListener('click', async function() {
+  logConsole.innerHTML = '';
+  _knownLogs = 0;
+  setDashboardSaveButtonEnabled(false);
+  updateTrackerState({
+    status: 'running',
+    progress: 0,
+    data_path: currentDataPath,
+    agents: Object.fromEntries(TRACKER_PHASES.map(phase => [phase.agent, 'idle'])),
+  });
+  showProgressTracker();
+
+  this.textContent = 'Starting…';
+  this.disabled    = true;
+
+  try {
+    const resp = await fetch(BASE_URL + '/api/run', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ data_path: currentDataPath }),
+    });
+
+    if (resp.status === 409) {
+      appendLog({ t: new Date().toLocaleTimeString('en-US',{hour12:false}), tag:'WARN', msg:'Pipeline already running.' });
+      updateTrackerState({ status: 'running', progress: 0, data_path: currentDataPath });
+      this.textContent = 'Running…';
+      _pollTimer = setTimeout(pollStatus, 1500);
+      return;
+    }
+    if (!resp.ok) {
+      const err = await resp.json();
+      appendLog({ t: new Date().toLocaleTimeString('en-US',{hour12:false}), tag:'ERR', msg: err.error || 'Unknown error' });
+      updateTrackerState({ status: 'error', progress: 0, data_path: currentDataPath, error: err.error || 'Unknown error' });
+      this.disabled = false;
+      this.innerHTML = `<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Pipeline`;
+      return;
+    }
+
+    const accepted = await resp.json();
+    updateTrackerState({
+      status: 'running',
+      progress: 0,
+      data_path: accepted.data_path || currentDataPath,
+      agents: Object.fromEntries(TRACKER_PHASES.map(phase => [phase.agent, 'idle'])),
+    });
+    this.textContent = 'Running…';
+    _pollTimer = setTimeout(pollStatus, 1500);
+
+  } catch (_) {
+    // Flask not running — fall back to demo mode
+    appendLog({ t: new Date().toLocaleTimeString('en-US',{hour12:false}), tag:'WARN', msg:'Flask server not found — running in demo mode.' });
+    updateTrackerState({ status: 'running', progress: 10, data_path: currentDataPath });
+    setTimeout(() => {
+      appendLog({ t: new Date().toLocaleTimeString('en-US',{hour12:false}), tag:'DONE', msg:'Demo run complete (mock data displayed).' });
+      updateTrackerState({
+        status: 'done',
+        progress: 100,
+        data_path: currentDataPath,
+        agents: Object.fromEntries(TRACKER_PHASES.map(phase => [phase.agent, 'done'])),
+      });
+      setDashboardSaveButtonEnabled(true);
+      this.disabled = false;
+      this.innerHTML = `<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Pipeline`;
+    }, 2000);
+  }
+});
+
+// ── Restore previous run on page load ─────────────────────────────────────
+restoreLastRunOnLoad();
+});
+</script>
+  <!-- DATA CONFIG MODAL -->
+  <div class="modal-overlay" id="modal-data-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Data Configuration</h2>
+        <p class="modal-subtitle">Select or upload the 311 dataset for this run.</p>
+      </div>
+      
+      <div class="modal-section-label">Server Sources</div>
+      <div id="server-data-options">
+        <div class="data-option data-option--empty">
+          <span class="data-option__title">Loading available datasets...</span>
+          <span class="data-option__path">Checking the project root and uploaded files.</span>
+        </div>
+      </div>
+
+      <div class="modal-section-label">Local Upload</div>
+      <div class="upload-area" id="upload-trigger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drop CSV here or click to browse</p>
+        <input type="file" id="file-input" accept=".csv" style="display:none;" />
+      </div>
+      <div id="upload-status" style="font-size:10px; margin-top:5px; color:var(--success); display:none;"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btn-modal-close">Cancel</button>
+        <button class="btn btn-primary" id="btn-modal-save">Select & Execute</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay tracker-overlay" id="tracker-overlay">
+    <div class="modal tracker-modal" role="dialog" aria-modal="true" aria-labelledby="tracker-title">
+      <div class="tracker-header">
+        <div>
+          <div class="modal-section-label" style="margin:0 0 8px;">Live Run Window</div>
+          <h2 class="modal-title" id="tracker-title">Pipeline Progress Tracker</h2>
+          <p class="modal-subtitle">Dataset: <span id="tracker-dataset">No dataset selected</span></p>
+        </div>
+        <div class="tracker-header__actions">
+          <button class="btn btn-ghost" id="btn-clear-logs" aria-label="Clear tracker logs">Clear Logs</button>
+          <button class="btn btn-ghost" id="btn-close-tracker" aria-label="Close tracker window">Close</button>
+        </div>
+      </div>
+      <div class="tracker-shell">
+        <div class="tracker-sidebar">
+          <div class="tracker-summary">
+            <div class="tracker-summary__top">
+              <span class="tracker-status tracker-status--idle" id="tracker-status-pill">Idle</span>
+              <span class="tracker-progress__pct" id="tracker-progress-label">0%</span>
+            </div>
+            <div class="tracker-progress">
+              <div class="tracker-progress__bar" id="tracker-progress-bar"></div>
+            </div>
+            <div class="tracker-current-phase" id="tracker-current-phase">Awaiting pipeline start.</div>
+          </div>
+          <div class="tracker-phase-list" id="tracker-phase-list"></div>
+        </div>
+        <div class="tracker-main">
+          <div class="tracker-main__top">
+            <div class="panel__title">Live Logs <span class="badge">Background Run</span></div>
+            <div class="tracker-run-state" id="tracker-run-state">The tracker will update as soon as a new run begins.</div>
+          </div>
+          <div class="tracker-error" id="tracker-error" hidden></div>
+          <div class="log-console tracker-log-console" id="log-console" role="log" aria-live="polite" aria-label="Pipeline log output"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
