@@ -1,0 +1,25 @@
+{
+  "name": "modelWithKnowledge",
+  "timestamp": "20260420_123728",
+  "best_model": "XGBoost",
+  "metrics": {
+    "records": {
+      "label": "Records Processed",
+      "value": 5000,
+      "delta": 0,
+      "reasoning": "Stable records processed, indicating consistent Dallas 311 service request handling."
+    },
+    "features": {
+      "label": "Features Selected",
+      "value": 10,
+      "reasoning": "No features selected, hindering Dallas 311 service request model accuracy and optimization potential."
+    },
+    "accuracy": {
+      "label": "Best ROC-AUC",
+      "value": 0.812,
+      "reasoning": "Stable model performance, with 81.2% predictive accuracy, supports reliable Dallas 311 service request optimizations."
+    }
+  },
+  "roc_auc": 0.727890100671141,
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\sample.csv"
+}

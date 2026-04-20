@@ -6,6 +6,8 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
 
 # Environments
 .env

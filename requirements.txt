@@ -16,3 +16,10 @@ xgboost
 matplotlib
 gunicorn
 groq
+google-cloud-spanner
+langchain-google-spanner
+pypdf
+langchain-text-splitters
+langchain-google-vertexai
+google-cloud-aiplatform
+langchain-google-genai

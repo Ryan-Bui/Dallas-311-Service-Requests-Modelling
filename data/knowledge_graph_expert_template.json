@@ -1,0 +1,44 @@
+{
+  "nodes": [
+    {
+      "id": "dept_sanitation",
+      "label": "Department",
+      "name": "Sanitation",
+      "staffing_level": "Medium",
+      "historical_success_rate": "88%"
+    },
+    {
+      "id": "metric_sanitation_sla",
+      "label": "Metric",
+      "name": "Sanitation ERT Standard",
+      "value": "3 Business Days",
+      "type": "Estimated Response Time"
+    },
+    {
+      "id": "factor_weather_delay",
+      "label": "ExternalFactor",
+      "name": "Severe Rain / Wind",
+      "impact": "Increases collection time by 1-2 days",
+      "category": "Weather"
+    },
+    {
+      "id": "district_7",
+      "label": "District",
+      "name": "City Council District 7",
+      "region": "South Dallas / Fair Park",
+      "local_challenge": "Higher density of older infrastructure"
+    }
+  ],
+  "edges": [
+    {
+      "source": "dept_sanitation",
+      "target": "metric_sanitation_sla",
+      "relationship": "GOVERNED_BY"
+    },
+    {
+      "source": "factor_weather_delay",
+      "target": "dept_sanitation",
+      "relationship": "INFLUENCES_DELAY"
+    }
+  ]
+}

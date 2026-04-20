@@ -80,8 +80,8 @@
 | # | Sub-Task | Completion Criteria |
 |---|----------|---------------------|
 | 5.1 | Build `inference/llm_wrapper.py` — accepts model coefficients, feature importances, and a prediction; returns a natural-language explanation | Function returns a coherent English paragraph explaining the prediction drivers |
-| 5.2 | Integrate with LLM API (OpenAI / Gemini / local Llama) via `openai` or `langchain` | API call succeeds and returns a well-formed explanation string |
-| 5.3 | Design the prompt template that feeds model context to the LLM (coefficients, variable names, data summary stats) | Prompt template is parameterized, version-controlled, and produces consistent output quality |
+| 5.2 | Integrate with LLM API (OpenAI / Gemini / local Llama) via `llm_factory` and `explainability_chain` | LCEL chain succeeds and returns a well-formed explanation string |
+| 5.3 | Design the prompt template that feeds model context to the LLM (coefficients, variable names, data summary stats) | Prompt template is implemented in `explainability_chain.py` |
 | 5.4 | Add explanation caching to avoid redundant API calls for identical inputs | Repeated identical inputs return cached explanations without hitting the API |
 
 **Phase Gate:** Given a prediction result, the LLM wrapper produces a human-readable, accurate narrative referencing actual model variables and their contributions.

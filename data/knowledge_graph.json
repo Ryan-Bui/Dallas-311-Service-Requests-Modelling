@@ -1,0 +1,43 @@
+{
+  "nodes": [
+    {
+      "id": "dept_sanitation",
+      "label": "Department",
+      "name": "Sanitation",
+      "description": "Waste collection and cart delivery.",
+      "avg_ert": "3 Business Days"
+    },
+    {
+      "id": "metric_sanitation_sla",
+      "label": "Metric",
+      "name": "Sanitation Standard",
+      "value": "72 Hours",
+      "type": "ERT"
+    },
+    {
+      "id": "factor_holiday",
+      "label": "ExternalFactor",
+      "name": "Public Holiday",
+      "impact": "Adds 24-hour buffer to all routes"
+    },
+    {
+      "id": "district_7",
+      "label": "District",
+      "name": "District 7",
+      "region": "South Dallas",
+      "local_challenge": "Old truck narrow access"
+    }
+  ],
+  "edges": [
+    {
+      "source": "dept_sanitation",
+      "target": "metric_sanitation_sla",
+      "relationship": "GOVERNED_BY"
+    },
+    {
+      "source": "factor_holiday",
+      "target": "dept_sanitation",
+      "relationship": "INFLUENCES_DELAY"
+    }
+  ]
+}

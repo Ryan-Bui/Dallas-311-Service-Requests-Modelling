@@ -57,6 +57,8 @@ try:
 except ImportError:
     _CORS = None  # optional — not needed for same-origin requests
 
+from inference.explainability_chain import create_explainability_chain, format_coef_summary, get_domain_context
+
 # ── App ───────────────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder=str(UI_DIR))
 if _CORS:
@@ -225,46 +227,88 @@ def _build_last_trained_case(df: pd.DataFrame | None) -> dict | None:
     }
 
 
-def _generate_metric_reasoning(metric_name: str, value: any, delta: float = 0.0) -> str:
-    """Generate human-like reasoning for a metric using Groq LLM if available."""
+def _generate_metric_reasoning(metric_name: str, value: any, delta: float = 0.0, domain_context: str = None) -> str:
+    """Generate human-like reasoning for a metric using Groq LLM and Knowledge Graph context."""
     # 1. Fallback base text
-    fallback_text = "Metric is within expected parameters."
-    if metric_name == "Accuracy":
-        if float(value) > 0.85:
-            fallback_text = "The model is showing exceptional predictive strength."
-        else:
-            fallback_text = "Performance is stable, though further feature engineering might help."
-    elif metric_name == "Records Processed":
-        fallback_text = f"Successfully ingested {value} records. Baseline dataset is ready."
-    elif metric_name == "Features Selected":
-        fallback_text = "Dimensionality reduction has focused on the most impactful predictors."
-    elif metric_name == "Best ROC-AUC":
-        fallback_text = f"The current {value} score suggests the model is effective at distinguishing classes."
-
+    fallback_text = "Metric is within normal operational parameters."
+    
     # 2. Attempt LLM Reasoning
     if groq_client:
         try:
+            # Construct a prompt that enforces the new 3-section structure
             prompt = f"""
-            System: You are an expert data science consultant. 
-            User: Provide a very brief (max 25 words) human-readable, professional insight for the following metric:
-            Metric: {metric_name}
-            Current Value: {value}
-            Trend/Delta: {delta}
-            Focus on what this means for the Dallas 311 service request optimization project.
+            System: You are an expert City Operations Consultant specializing in Dallas 311 Service Requests.
+            User: Provide a strategic, structured analysis for the following metric.
+            
+            METRIC: {metric_name}
+            VALUE: {value}
+            
+            GROUNDING DATA (from Spanner Knowledge Graph & City Audit Reports):
+            {domain_context if domain_context else "Standard Dallas 311 departmental procedures apply."}
+            
+            TASK: 
+            Provide the response strictly in the following Markdown format:
+1. **Strategic Insight**: [One sentence core takeaway]
+2. **Operational Context**: [One sentence connecting to Spanner KG/Audit grounding]
+3. **Recommended Action**: [One sentence actionable next step for city officials]
+
+            Use professional, authoritative language. Keep the entire response under 60 words.
             """
             
             chat_completion = groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
                 model=GROQ_MODEL,
-                max_tokens=60,
-                temperature=0.7,
+                max_tokens=200,
+                temperature=0.6,
             )
             llm_text = chat_completion.choices[0].message.content.strip()
             if llm_text:
-                print(f"[AI] Success: Generated reasoning for '{metric_name}'")
+                print(f"[AI] Success: Generated grounded reasoning for '{metric_name}'")
                 return llm_text
         except Exception as e:
-            print(f"[AI] Reasoning failed for {metric_name}: {str(e)}")
+            print(f"[AI] Grounded reasoning failed for {metric_name}: {str(e)}")
+
+    return fallback_text
+
+
+def _generate_features_reasoning(feat_imp: list, domain_context: str = None) -> str:
+    """Generate structured AI reasoning for the Top Predictors (Feature Importance)."""
+    top_features = ", ".join([f"{f['name']} ({f['score']:.3f})" for f in feat_imp[:5]])
+    fallback_text = f"Top predictors for this model include: {top_features}. These factors significantly influence prediction accuracy."
+    
+    if groq_client:
+        try:
+            prompt = f"""
+            System: You are an expert City Operations Consultant specializing in Dallas 311 Service Requests.
+            User: Provide a strategic analysis of the model's Top Predictors.
+            
+            TOP PREDICTORS (Feature Name & Importance Score):
+            {top_features}
+            
+            GROUNDING DATA (from Spanner Knowledge Graph & City Audit Reports):
+            {domain_context if domain_context else "Standard Dallas 311 departmental procedures apply."}
+            
+            TASK: 
+            Provide the response strictly in the following Markdown format:
+1. **Strategic Insight**: [One sentence explaining why the #1 predictor is critical to performance]
+2. **Operational Context**: [One sentence connecting these predictors to city departmental workflows (e.g. sanitation, code compliance)]
+3. **Recommended Action**: [One sentence actionable advice for city managers based on these predictors]
+
+            Use professional, authoritative language. Keep the entire response under 65 words.
+            """
+            
+            chat_completion = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=GROQ_MODEL,
+                max_tokens=250,
+                temperature=0.6,
+            )
+            llm_text = chat_completion.choices[0].message.content.strip()
+            if llm_text:
+                print("[AI] Success: Generated feature importance reasoning")
+                return llm_text
+        except Exception as e:
+            print(f"[AI] Feature reasoning failed: {str(e)}")
 
     return fallback_text
 
@@ -690,23 +734,31 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
 
         finished_at = datetime.now().isoformat()
 
-        # Build top-level 'Metric Objects'
+        # Build top-level 'Metric Objects' with context
+        last_case = _build_last_trained_case(df_transformed)
+        dept_name = last_case.get("department") if last_case else "Dallas 311"
+        
+        try:
+            domain_context = get_domain_context(department=dept_name)
+        except Exception:
+            domain_context = "Standard Dallas 311 procedures apply."
+
         metrics = {
             "records": {
                 "label": "Records Processed",
                 "value": int(df_clean.shape[0]),
                 "delta": 0,
-                "reasoning": _generate_metric_reasoning("Records Processed", int(df_clean.shape[0]))
+                "reasoning": _generate_metric_reasoning("Records Processed", int(df_clean.shape[0]), domain_context=domain_context)
             },
             "features": {
                 "label": "Features Selected",
                 "value": len(feat_imp) if feat_imp else int(df_clean.shape[1]),
-                "reasoning": _generate_metric_reasoning("Features Selected", None)
+                "reasoning": _generate_metric_reasoning("Features Selected", None, domain_context=domain_context)
             },
             "accuracy": {
                 "label": "Best ROC-AUC",
                 "value": round(float(reg_result["best_roc_auc"]), 3),
-                "reasoning": _generate_metric_reasoning("Best ROC-AUC", round(float(reg_result["best_roc_auc"]), 3))
+                "reasoning": _generate_metric_reasoning("Best ROC-AUC", round(float(reg_result["best_roc_auc"]), 3), domain_context=domain_context)
             }
         }
 
@@ -729,7 +781,7 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             "split_info":    split_info,
             "split_info_reasoning": _generate_report_reasoning("Data Split Analysis", f"Train size: {split_info.get('train_size')} | Test size: {split_info.get('test_size')} | Total: {split_info.get('total_size')}"),
             "feature_importances": feat_imp,
-            "features_reasoning": _generate_report_reasoning("Feature Importance Analysis", f"Top predictors identified by the best model: {', '.join([f['name'] for f in feat_imp])}"),
+            "features_reasoning": _generate_features_reasoning(feat_imp, domain_context=domain_context),
             "regularization": {
                 "best_method":  reg_result["best_method"],
                 "best_roc_auc": float(reg_result["best_roc_auc"]),
@@ -741,11 +793,13 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 "encoders_path": model_result.get("encoders_path"),
                 "results_path": str(RESULTS_PATH),
             },
-            "last_trained_case": _build_last_trained_case(df_transformed),
+            "last_trained_case": last_case,
             "feature_importance": feat_imp,
             "data_shape":  [int(df_clean.shape[0]), int(df_clean.shape[1])],
             "train_test":  [int(msa.X_train_.shape[0]), int(msa.X_test_.shape[0])],
         }
+
+        # Expert AI Analysis is now distributed into individual metrics reasoning fields.
 
         results = _make_json_safe(results)
         _persist_results(results)
@@ -772,6 +826,9 @@ def _run_inference(data_path: str, model_path: Path | None = None, enc_path: Pat
     """Fast inference using a specific or the default best model."""
     m_path = model_path or (ARTIFACTS_DIR / "best_model.joblib")
     e_path = enc_path or (ARTIFACTS_DIR / "encoders.joblib")
+    
+    # Import locally for inference
+    from src.preprocessing import handle_missing_values, handle_service_request_type, encode_categoricals, split_features_target
 
     with _lock:
         _state.update({
@@ -813,7 +870,6 @@ def _run_inference(data_path: str, model_path: Path | None = None, enc_path: Pat
         # Encode & Clean (Only if RAW data)
         if 'Created Date' in df_clean.columns:
             _log("Preprocessing and encoding raw data...")
-            from src.preprocessing import handle_missing_values, handle_service_request_type, encode_categoricals, split_features_target
             X, y = split_features_target(df_trans)
             X, _ = handle_missing_values(X, X)
             X, _ = handle_service_request_type(X, X)
@@ -1221,4 +1277,4 @@ if __name__ == "__main__":
     print(f"  Running at: http://localhost:{args.port}")
     print(f"  Press Ctrl+C to stop.\n")
 
-    app.run(host="0.0.0.0", port=args.port, debug=args.debug, use_reloader=False)
+    app.run(host="0.0.0.0", port=args.port, debug=args.debug, use_reloader=True)

@@ -1,0 +1,25 @@
+{
+  "name": "final_model",
+  "timestamp": "20260420_141625",
+  "best_model": "XGBoost",
+  "metrics": {
+    "records": {
+      "label": "Records Processed",
+      "value": 5000,
+      "delta": 0,
+      "reasoning": "1. **Strategic Insight**: Processing 5000 records indicates high operational volume.\n2. **Operational Context**: Linked to Transportation and Public Works department.\n3. **Recommended Action**: Optimize data analytics for efficiency gains."
+    },
+    "features": {
+      "label": "Features Selected",
+      "value": 10,
+      "reasoning": "1. **Strategic Insight**: Inconsistent naming hinders data analysis.\n2. **Operational Context**: City knowledge map reveals inconsistent naming.\n3. **Recommended Action**: Standardize department naming conventions."
+    },
+    "accuracy": {
+      "label": "Best ROC-AUC",
+      "value": 0.839,
+      "reasoning": "1. **Strategic Insight**: The Best ROC-AUC value of 0.839 indicates moderate predictive accuracy.\n2. **Operational Context**: This metric is grounded in Dallas' Transportation and Public Works data.\n3. **Recommended Action**: Refine predictive models to improve accuracy."
+    }
+  },
+  "roc_auc": 0.7036601886540005,
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\data\\uploaded\\sample.csv"
+}
