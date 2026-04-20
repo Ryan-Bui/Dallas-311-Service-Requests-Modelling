@@ -10,6 +10,8 @@ COLUMNS_TO_DROP_INITIAL = [
     'Service Request Number',
     'Unique Key',
     'Address',
+    'Overall Service Request Due Date',
+    'Created Date',
 ]
 
 # Minimum count threshold for grouping rare departments

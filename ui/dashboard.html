@@ -711,8 +711,89 @@
 
       <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
         <button class="btn btn-ghost" onclick="closeSourceModal()">Cancel</button>
+        <button class="btn" style="background: var(--bg-surface); border: 1px solid var(--border);" onclick="openManualModal()">Use Manual Data Entry</button>
         <button class="btn btn-primary" onclick="saveSourceSelection()">Apply Changes</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MANUAL DATA ENTRY MODAL -->
+  <div class="modal-backdrop" id="manual-modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2 style="font-size: var(--text-lg); font-weight: 700;">Manual Inference Request</h2>
+        <button class="btn" style="padding: 4px; background: transparent;" onclick="closeManualModal()">&times;</button>
+      </div>
+      <p style="font-size: var(--text-sm); color: var(--text-muted); margin-bottom: 20px;">Enter raw ticket details for a single row prediction.</p>
+      
+      <form id="manual-entry-form" onsubmit="submitManualInference(event)" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+                <label class="kpi-label" style="font-size: 10px;">Department</label>
+                <select id="manual-dept" class="btn" style="width:100%; text-align:left; background:var(--bg-surface); border:1px solid var(--border);">
+                    <option value="Code Compliance">Code Compliance</option>
+                    <option value="Public Works">Public Works</option>
+                    <option value="Sanitation">Sanitation</option>
+                    <option value="Transportation">Transportation</option>
+                    <option value="Dallas Animal Services">Dallas Animal Services</option>
+                    <option value="Police Department">Police Department</option>
+                    <option value="Water Utilities">Water Utilities</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="kpi-label" style="font-size: 10px;">Priority</label>
+                <select id="manual-priority" class="btn" style="width:100%; text-align:left; background:var(--bg-surface); border:1px solid var(--border);">
+                    <option value="Standard">Standard</option>
+                    <option value="Priority">Priority</option>
+                    <option value="High">High</option>
+                    <option value="Dispatch">Dispatch</option>
+                    <option value="Emergency">Emergency</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="kpi-label" style="font-size: 10px;">Service Request Type</label>
+            <select id="manual-type" class="btn" style="width:100%; text-align:left; background:var(--bg-surface); border:1px solid var(--border);">
+                <option value="Code Concern - CCS">Code Concern - CCS</option>
+                <option value="Sanitation Roll Cart Maintenance/Delivery - SAN">Sanitation Roll Cart Maintenance/Delivery</option>
+                <option value="Parking - Report a Violation - TPW">Parking Violation</option>
+                <option value="Animal Loose - DAS">Animal Loose</option>
+                <option value="Dead Animal Pick Up - DAS">Dead Animal Pick Up</option>
+                <option value="Homeless Encampment - OHS">Homeless Encampment</option>
+                <option value="Street Repair - Routine - PBW">Street Repair</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+                <label class="kpi-label" style="font-size: 10px;">Method Received</label>
+                <select id="manual-method" class="btn" style="width:100%; text-align:left; background:var(--bg-surface); border:1px solid var(--border);">
+                    <option value="Phone">Phone</option>
+                    <option value="311-App">Mobile App</option>
+                    <option value="Web">Web Portal</option>
+                    <option value="API">API/External</option>
+                    <option value="Email">Email</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="kpi-label" style="font-size: 10px;">Created Date/Time</label>
+                <input type="datetime-local" id="manual-date" class="btn" style="width:100%; background:var(--bg-surface); border:1px solid var(--border); color:var(--text-primary);">
+            </div>
+        </div>
+
+        <div id="manual-result" style="display:none; padding: 16px; border-radius: 8px; margin-top: 8px;">
+            <div id="manual-pred-val" style="font-size: 18px; font-weight: 700;"></div>
+            <div id="manual-reasoning" class="ai-reasoning" style="display:block; margin-top: 12px; background: rgba(255,255,255,0.05);"></div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+            <button type="button" class="btn" onclick="closeManualModal()">Cancel</button>
+            <button type="submit" id="manual-submit-btn" class="btn btn-primary">Run Inference</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1108,6 +1189,72 @@
       } else {
           renderFileList();
       }
+    }
+
+    // ── MANUAL INFERENCE logic ───────────────────────────────────────────────
+    function openManualModal() {
+        closeSourceModal();
+        document.getElementById('manual-modal').style.display = 'flex';
+        // Set default date to now
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('manual-date').value = now.toISOString().slice(0, 16);
+        document.getElementById('manual-result').style.display = 'none';
+    }
+
+    function closeManualModal() {
+        document.getElementById('manual-modal').style.display = 'none';
+    }
+
+    async function submitManualInference(e) {
+        e.preventDefault();
+        const btn = document.getElementById('manual-submit-btn');
+        const resultDiv = document.getElementById('manual-result');
+        const predVal = document.getElementById('manual-pred-val');
+        const reasonDiv = document.getElementById('manual-reasoning');
+
+        btn.disabled = true;
+        btn.innerText = 'Analyzing...';
+        
+        const payload = {
+            "Department": document.getElementById('manual-dept').value,
+            "Department_grouped": document.getElementById('manual-dept').value === 'Code Compliance' ? 'Code Compliance' : 'Other',
+            "Priority": document.getElementById('manual-priority').value,
+            "Service Request Type": document.getElementById('manual-type').value,
+            "Method Received Description": document.getElementById('manual-method').value,
+            "Created Date": document.getElementById('manual-date').value.replace('T', ' ') + ':00',
+            "ERT (Estimated Response Time)": "3 days" // Default for manual tests
+        };
+
+        try {
+            const res = await fetch('/api/manual_infer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            resultDiv.style.display = 'block';
+            if (data.prediction === 1) {
+                resultDiv.style.border = '1px solid #10B981';
+                resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+                predVal.style.color = '#10B981';
+                predVal.innerText = 'Prediction: FAST CLOSE (Within 72h)';
+            } else {
+                resultDiv.style.border = '1px solid #EF4444';
+                resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                predVal.style.color = '#EF4444';
+                predVal.innerText = 'Prediction: SLOW CLOSE (> 72h)';
+            }
+            
+            reasonDiv.innerHTML = `<strong>Expert AI Insight:</strong><br>${marked.parse(data.explanation)}`;
+            
+        } catch (err) {
+            alert("Inference failed: " + err);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Run Inference';
+        }
     }
 
     function saveSourceSelection() {

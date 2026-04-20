@@ -917,6 +917,40 @@ def _run_inference(data_path: str, model_path: Path | None = None, enc_path: Pat
         logger.exception("Inference thread exception")
 
 
+def _preprocess_manual_row(row: dict, encoders: dict) -> pd.DataFrame:
+    """Transform a single manual entry dict into a model-ready DataFrame."""
+    from src.feature_engineering import add_time_features
+    from src.preprocessing import clean_ert, encode_categoricals, handle_service_request_type, handle_missing_values
+
+    # 1. Create initial DataFrame
+    df = pd.DataFrame([row])
+
+    # 2. Extract time features if Created Date is present
+    if "Created Date" in df.columns:
+        df["Created Date"] = pd.to_datetime(df["Created Date"])
+        df = add_time_features(df)
+        df = df.drop(columns=["Created Date"], errors="ignore")
+
+    # 3. Clean ERT
+    df = clean_ert(df)
+
+    # 4. Handle Service Request Type (top_n logic)
+    # We pass it through handle_service_request_type but we need X_train for fitting usually.
+    # Here we just ensure it aligns with encoders if needed, or we rely on encode_categoricals unknown handling.
+    
+    # 5. Encoding & Scaling
+    # We use encode_categoricals in inference mode (initial_encoders=encoders)
+    # We need a dummy Y for the function signature
+    X_final, _, _ = encode_categoricals(df, df, initial_encoders=encoders)
+    
+    # Apply Scaling
+    if "scaler" in encoders:
+        scaler = encoders["scaler"]
+        X_final = pd.DataFrame(scaler.transform(X_final), columns=X_final.columns, index=X_final.index)
+
+    return X_final
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -1194,6 +1228,66 @@ def infer_from_history():
     )
     thread.start()
     return jsonify({"status": "started", "model": history_id, "data": str(data_path)}), 202
+
+
+@app.route("/api/manual_infer", methods=["POST"])
+def manual_infer():
+    """Run model inference on a single manually entered row."""
+    m_path = ARTIFACTS_DIR / "best_model.joblib"
+    e_path = ARTIFACTS_DIR / "encoders.joblib"
+
+    if not m_path.exists() or not e_path.exists():
+        return jsonify({"error": "Model artifacts not found. Run pipeline first."}), 400
+
+    try:
+        row = request.get_json()
+        if not row:
+            return jsonify({"error": "No data provided"}), 400
+
+        # 1. Preprocess
+        model = joblib.load(m_path)
+        encoders = joblib.load(e_path)
+        X_final = _preprocess_manual_row(row, encoders)
+
+        # 2. Predict
+        prediction_prob = model.predict_proba(X_final)[0][1]
+        prediction_class = int(model.predict(X_final)[0])
+        
+        # 3. Explain (Agentic reasoning)
+        # We build a 'coef_summary' if it's a linear model, or just use features
+        coef_summary = ""
+        if hasattr(model, 'coef_'):
+            import pandas as pd
+            df_coef = pd.DataFrame({
+                'Feature': X_final.columns,
+                'Coefficient': model.coef_[0]
+            })
+            coef_summary = format_coef_summary(df_coef)
+        elif hasattr(model, 'feature_importances_'):
+            # Fallback for trees: top local features
+            imps = model.feature_importances_
+            top_idx = np.argsort(imps)[-5:][::-1]
+            coef_summary = "\n".join([f"- {X_final.columns[i]}: {imps[i]:.4f} (Importance)" for i in top_idx])
+
+        # Call the explainability chain
+        chain = create_explainability_chain()
+        explanation = chain.invoke({
+            "prediction": f"{'Fast' if prediction_class == 1 else 'Slow'} Close (Probability: {prediction_prob:.2%})",
+            "coef_summary": coef_summary,
+            "department": row.get("Department"),
+            "district": row.get("City Council District")
+        })
+
+        return jsonify({
+            "prediction": prediction_class,
+            "probability": float(prediction_prob),
+            "explanation": explanation,
+            "row": row
+        })
+
+    except Exception as e:
+        logger.exception("Manual inference failed")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/reset", methods=["POST"])
