@@ -42,6 +42,12 @@ def ingest_pdfs():
         print(f"No PDFs found in {REPORTS_DIR}.")
         return
 
+    # Get department mapping from Spanner
+    with database.snapshot() as snapshot:
+        dept_results = snapshot.execute_sql("SELECT DeptId, Name FROM Departments")
+        dept_map = {row[1]: row[0] for row in dept_results}
+        print(f"Loaded {len(dept_map)} departments for tagging.")
+
     for pdf_file in pdf_files:
         # Check if file is already ingested to support resuming
         with database.snapshot() as snapshot:
@@ -79,15 +85,23 @@ def ingest_pdfs():
                     source_type = "Golden" if "knowledge" in pdf_file.lower() else "Report"
                     
                     for j, (chunk_text, embedding) in enumerate(zip(batch_chunks, embeddings)):
+                        # Detect DeptId
+                        detected_dept_id = None
+                        for d_name, d_id in dept_map.items():
+                            if d_name.lower() in chunk_text.lower():
+                                detected_dept_id = d_id
+                                break
+                        
                         batch.insert(
                             table="DocumentChunks",
-                            columns=("ChunkId", "Content", "Embedding", "SourceFile", "SourceType"),
+                            columns=("ChunkId", "Content", "Embedding", "SourceFile", "SourceType", "DeptId"),
                             values=[(
                                 str(uuid.uuid4()),
                                 chunk_text,
                                 embedding,
                                 pdf_file,
-                                source_type
+                                source_type,
+                                detected_dept_id
                             )]
                         )
             print(f"  Successfully ingested {pdf_file}.")
