@@ -1,0 +1,8 @@
+GROQ_API_KEY= your_groq_API_key
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Pipeline Settings
+MAX_DIAGNOSTIC_RETRIES=3
+P_VALUE_THRESHOLD=0.05
+# .env
+SKIP_REGULARIZATION=True //False to include regularization agent in the pipeline
