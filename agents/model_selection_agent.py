@@ -31,6 +31,7 @@ from src.preprocessing import (
     encode_categoricals,
     split_features_target,
     split_train_test,
+    scale_features,
 )
 from src.models import (
     train_logistic_regression,
@@ -94,6 +95,10 @@ class ModelSelectionAgent(BaseAgent):
         logger.info("[ModelSelectionAgent] Encoding categoricals …")
         X_train, X_test, encoders = encode_categoricals(X_train, X_test)
 
+        logger.info("[ModelSelectionAgent] Standardizing features …")
+        X_train, X_test, scaler = scale_features(X_train, X_test)
+        encoders["scaler"] = scaler
+
         self.encoders_      = encoders
         self.X_train_       = X_train
         self.y_train_       = y_train
@@ -111,21 +116,23 @@ class ModelSelectionAgent(BaseAgent):
         logger.info("[ModelSelectionAgent] Training XGBoost …")
         xgb_model = train_xgboost(X_train, y_train)
 
-        # Evaluate
-        results: dict = {}
-        results["Logistic Regression"] = evaluate_model("Logistic Regression", log_model, X_test, y_test)
-        results["Random Forest"]        = evaluate_model("Random Forest",        rf_model,  X_test, y_test)
-        results["XGBoost"]              = evaluate_model("XGBoost",              xgb_model, X_test, y_test)
-
-        self.comparison_df_ = compare_models(results, y_test)
-
-        # Pick best by ROC-AUC
         model_map = {
             "Logistic Regression": log_model,
             "Random Forest":       rf_model,
             "XGBoost":             xgb_model,
         }
-        best_name = self.comparison_df_.sort_values("ROC_AUC", ascending=False).iloc[0]["Model"]
+
+        # Evaluate all models with rich metrics
+        detailed_results = {}
+        for name, model in model_map.items():
+            detailed_results[name] = evaluate_model(name, model, X_test, y_test)
+            # Add feature importance if available
+            if hasattr(model, 'feature_importances_'):
+                imp = pd.Series(model.feature_importances_, index=self.feature_names_).sort_values(ascending=False).to_dict()
+                detailed_results[name]["feature_importance"] = imp
+
+        # Determine best model
+        best_name = max(detailed_results, key=lambda n: detailed_results[n]["ROC_AUC"])
         self.best_model_name_ = best_name
         self.best_model_      = model_map[best_name]
 
@@ -136,11 +143,24 @@ class ModelSelectionAgent(BaseAgent):
         joblib.dump(encoders, encoders_path)
         logger.info("[ModelSelectionAgent] Saved best model (%s) to %s", best_name, model_path)
 
+        # Persist test set for historical evaluation
+        test_set     = X_test.copy()
+        test_set['target'] = y_test
+        test_path    = self.models_dir / "latest_test_set.csv"
+        test_set.to_csv(test_path, index=False)
+        logger.info("[ModelSelectionAgent] Saved test set to %s", test_path)
+
         return {
             "best_model_name": best_name,
-            "comparison":      self.comparison_df_.to_dict(orient="records"),
+            "detailed_results": detailed_results,
+            "split_info": {
+                "train_size": len(X_train),
+                "test_size": len(X_test),
+                "total_size": len(X_train) + len(X_test)
+            },
             "model_path":      str(model_path),
             "encoders_path":   str(encoders_path),
+            "test_set_path":   str(test_path),
         }
 
     # ------------------------------------------------------------------

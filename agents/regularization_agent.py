@@ -98,10 +98,11 @@ class RegularizationAgent(BaseAgent):
         lasso_cv = LogisticRegressionCV(
             Cs=self.ALPHAS,
             penalty="l1",
-            solver="saga",
+            solver="liblinear",  # liblinear is very fast for L1 on medium data
             cv=self.CV_FOLDS,
             scoring="roc_auc",
-            max_iter=5000,
+            max_iter=1000,
+            tol=1e-3,
             random_state=42,
         )
         lasso_cv.fit(X_tr, y_tr)
@@ -117,11 +118,12 @@ class RegularizationAgent(BaseAgent):
         enet_cv = LogisticRegressionCV(
             Cs=self.ALPHAS,
             penalty="elasticnet",
-            solver="saga",
+            solver="saga",  # saga is required for elasticnet
             l1_ratios=[0.5],
             cv=self.CV_FOLDS,
             scoring="roc_auc",
-            max_iter=5000,
+            max_iter=1000,
+            tol=1e-3,
             random_state=42,
         )
         enet_cv.fit(X_tr, y_tr)

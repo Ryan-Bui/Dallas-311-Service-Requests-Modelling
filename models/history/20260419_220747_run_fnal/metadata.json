@@ -1,0 +1,25 @@
+{
+  "name": "run_fnal",
+  "timestamp": "20260419_220747",
+  "best_model": "XGBoost",
+  "metrics": {
+    "records": {
+      "label": "Records Processed",
+      "value": 5000,
+      "delta": 0,
+      "reasoning": "Successfully ingested 5000 records. Baseline dataset is ready."
+    },
+    "features": {
+      "label": "Features Selected",
+      "value": 10,
+      "reasoning": "Dimensionality reduction has focused on the most impactful predictors."
+    },
+    "accuracy": {
+      "label": "Best ROC-AUC",
+      "value": 0.846,
+      "reasoning": "The current 0.846 score suggests the model is effective at distinguishing classes."
+    }
+  },
+  "roc_auc": 0.7180074769794342,
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\sample2.csv"
+}

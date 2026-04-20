@@ -1,0 +1,25 @@
+{
+  "name": "V1-base model",
+  "timestamp": "20260419_202105",
+  "best_model": "Random Forest",
+  "metrics": {
+    "records": {
+      "label": "Records Processed",
+      "value": 500,
+      "delta": 0,
+      "reasoning": "Successfully ingested 500 records. The dataset is comprehensive enough to capture seasonal variations in 311 request patterns."
+    },
+    "features": {
+      "label": "Features Selected",
+      "value": 10,
+      "reasoning": "Dimensionality reduction has focused on the most impactful predictors like 'City Council District' and 'Request Type'."
+    },
+    "accuracy": {
+      "label": "Best ROC-AUC",
+      "value": 0.863,
+      "reasoning": "The current 0.863 score suggests the model is highly effective at distinguishing between urgent and non-urgent service requests."
+    }
+  },
+  "roc_auc": 0.8616584564860428,
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\sample.csv"
+}

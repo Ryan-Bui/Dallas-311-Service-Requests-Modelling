@@ -3,7 +3,7 @@
 # ============================================
 
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 
@@ -57,39 +57,59 @@ def clean_ert(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame):
-    """Ordinal-encode selected columns and one-hot-encode the rest, fitted on train."""
-    encoders = {}
+def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame, initial_encoders: dict | None = None):
+    """Ordinal-encode selected columns and one-hot-encode the rest.
     
-    # Ordinal encoding (replacing LabelEncoder to handle 2D inputs properly)
+    If initial_encoders is provided, it uses them to transform (inference mode).
+    Otherwise, it fits new encoders on X_train.
+    """
+    encoders = initial_encoders or {}
+    
+    # 1. Ordinal encoding
     for col in config.LABEL_ENCODE_COLUMNS:
         if col in X_train.columns:
-            oe = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
-            X_train[col] = oe.fit_transform(X_train[[col]])
-            X_test[col] = oe.transform(X_test[[col]])
-            encoders[col] = oe
+            # Sanitization for inference: cast to str and fill NaNs to prevent isnan TypeError
+            X_train[col] = X_train[col].astype(str).fillna("Unknown")
+            X_test[col] = X_test[col].astype(str).fillna("Unknown")
+            
+            if col in encoders:
+                oe = encoders[col]
+                X_train[col] = oe.transform(X_train[[col]])
+                X_test[col] = oe.transform(X_test[[col]])
+            else:
+                oe = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+                X_train[col] = oe.fit_transform(X_train[[col]])
+                X_test[col] = oe.transform(X_test[[col]])
+                encoders[col] = oe
 
-    # One-hot encoding for remaining object columns
+    # 2. One-hot encoding
     object_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
     if len(object_cols) > 0:
-        ohe = OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore')
-        
-        # Fit on train, transform train
-        train_encoded = ohe.fit_transform(X_train[object_cols])
-        feature_names = ohe.get_feature_names_out(object_cols)
-        
-        train_encoded_df = pd.DataFrame(train_encoded, columns=feature_names, index=X_train.index)
-        X_train = pd.concat([X_train.drop(columns=object_cols), train_encoded_df], axis=1)
-        
-        # Transform test
-        test_encoded = ohe.transform(X_test[object_cols])
-        test_encoded_df = pd.DataFrame(test_encoded, columns=feature_names, index=X_test.index)
-        X_test = pd.concat([X_test.drop(columns=object_cols), test_encoded_df], axis=1)
-        
-        encoders['ohe'] = ohe
+        if "ohe" in encoders:
+            ohe = encoders["ohe"]
+            feature_names = ohe.get_feature_names_out(object_cols)
+            
+            train_encoded = ohe.transform(X_train[object_cols])
+            train_encoded_df = pd.DataFrame(train_encoded, columns=feature_names, index=X_train.index)
+            X_train = pd.concat([X_train.drop(columns=object_cols), train_encoded_df], axis=1)
+            
+            test_encoded = ohe.transform(X_test[object_cols])
+            test_encoded_df = pd.DataFrame(test_encoded, columns=feature_names, index=X_test.index)
+            X_test = pd.concat([X_test.drop(columns=object_cols), test_encoded_df], axis=1)
+        else:
+            ohe = OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore')
+            train_encoded = ohe.fit_transform(X_train[object_cols])
+            feature_names = ohe.get_feature_names_out(object_cols)
+            
+            train_encoded_df = pd.DataFrame(train_encoded, columns=feature_names, index=X_train.index)
+            X_train = pd.concat([X_train.drop(columns=object_cols), train_encoded_df], axis=1)
+            
+            test_encoded = ohe.transform(X_test[object_cols])
+            test_encoded_df = pd.DataFrame(test_encoded, columns=feature_names, index=X_test.index)
+            X_test = pd.concat([X_test.drop(columns=object_cols), test_encoded_df], axis=1)
+            encoders['ohe'] = ohe
 
-    print("\nTrain shape after encoding:", X_train.shape)
-    print("Test shape after encoding:", X_test.shape)
+    print(f"\nCategorical encoding complete (Inference: {initial_encoders is not None})")
     return X_train, X_test, encoders
 
 
@@ -114,7 +134,7 @@ def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame):
 
 def split_features_target(df: pd.DataFrame):
     """Return X, y after dropping the target and days_to_close columns."""
-    X = df.drop(columns=['target', 'days_to_close'])
+    X = df.drop(columns=['target', 'days_to_close'], errors='ignore')
     
     # Drop raw datetime/timedelta columns if they still exist (they break numpy-based models)
     X = X.select_dtypes(exclude=['datetime64', 'timedelta64'])
@@ -141,3 +161,20 @@ def split_train_test(X, y, test_size=None, random_state=None):
     print("\nTrain size:", X_train.shape, y_train.shape)
     print("Test size:", X_test.shape, y_test.shape)
     return X_train, X_test, y_train, y_test
+
+
+def scale_features(X_train: pd.DataFrame, X_test: pd.DataFrame):
+    """Standardize numeric features using StandardScaler, fitted on train."""
+    # Only scale columns that are numeric and NOT encoded (categorical)
+    # Actually, scaling all columns is usually safer for solvers like SAGA
+    scaler = StandardScaler()
+    
+    cols = X_train.columns
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    X_train = pd.DataFrame(X_train_scaled, columns=cols, index=X_train.index)
+    X_test = pd.DataFrame(X_test_scaled, columns=cols, index=X_test.index)
+    
+    print("\nFeatures standardized using StandardScaler.")
+    return X_train, X_test, scaler

@@ -3,7 +3,7 @@
 # ============================================
 
 # Path to raw data
-DATA_PATH = r"C:\Users\Trong Nguyen\Downloads\311_Service_Requests_20260418.csv"
+DATA_PATH = "data/sample_3100.csv"
 
 # Columns to drop immediately after loading
 COLUMNS_TO_DROP_INITIAL = [
@@ -15,8 +15,8 @@ COLUMNS_TO_DROP_INITIAL = [
 # Minimum count threshold for grouping rare departments
 MIN_DEPARTMENT_COUNT = 1000
 
-# Sampling fraction for stratified sampling
-SAMPLE_FRAC = 0.1
+# Sampling fraction for stratified sampling (1.0 = use whole file)
+SAMPLE_FRAC = 1.0
 RANDOM_STATE = 42
 
 # Date format used in the raw CSV

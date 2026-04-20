@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dallas 311 — ML Pipeline Dashboard</title>
+  <meta name="description" content="Real-time analytics dashboard for the Dallas 311 ML Pipeline." />
+
+  <!-- Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root, [data-theme="dark"] {
+      --bg-base: #0F172A;
+      --bg-surface: #1E293B;
+      --bg-card: #1E293B;
+      --bg-card-hover: #334155;
+      --border: #334155;
+      --border-bright: #475569;
+      --primary: #6366F1;
+      --primary-light: #818CF8;
+      --primary-glow: rgba(99, 102, 241, 0.1);
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --font-family: 'Inter', sans-serif;
+      --text-xs: 11px; --text-sm: 13px; --text-md: 14px; --text-lg: 16px; --text-xl: 20px;
+      --radius-md: 10px; --transition: 200ms ease;
+    }
+
+    [data-theme="light"] {
+      --bg-base: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F1F5F9;
+      --border: #E2E8F0;
+      --border-bright: #CBD5E1;
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #94A3B8;
+    }
+
+    /* Base Styles */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-size: var(--text-sm);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      grid-template-rows: 60px 1fr;
+      min-height: 100vh;
+    }
+
+    .topnav {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .main { padding: 32px; display: flex; flex-direction: column; gap: 32px; }
+
+    /* KPI Cards - Metric Objects */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      transition: all var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .kpi-card:hover { border-color: var(--primary-light); background: var(--bg-card-hover); transform: translateY(-2px); }
+    .kpi-label { font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi-value { font-size: var(--text-2xl); font-weight: 700; color: var(--primary-light); }
+    .ai-reasoning {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      background: var(--primary-glow);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border-left: 3px solid var(--primary-light);
+      margin-top: 8px;
+    }
+    .ai-reasoning::before { content: 'AI INSIGHT'; display: block; font-size: 10px; font-weight: 800; color: var(--primary-light); margin-bottom: 4px; }
+
+    /* Theme Toggle */
+    .theme-toggle { display: flex; gap: 8px; background: var(--bg-base); padding: 4px; border-radius: 20px; border: 1px solid var(--border); }
+    .theme-btn { padding: 6px 12px; border-radius: 16px; border: none; background: transparent; color: var(--text-muted); font-size: 11px; cursor: pointer; transition: all 0.2s; }
+    .theme-btn.active { background: var(--primary); color: white; }
+
+    /* Utility */
+    .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-light); }
+

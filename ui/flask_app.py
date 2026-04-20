@@ -15,26 +15,38 @@ API endpoints:
     GET  /api/status    → pipeline state + recent logs
     GET  /api/results   → full results (after a run)
     POST /api/run       → start pipeline  { "data_path": "..." }
+    POST /api/infer     → start fast inference (no train) { "data_path": "..." }
     POST /api/reset     → reset to idle
 """
 from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 import threading
 from http import HTTPStatus
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables early
+load_dotenv()
+import shutil
+import joblib
+from groq import Groq
 
 # ── Path setup ────────────────────────────────────────────────────────────────
 ROOT      = Path(__file__).resolve().parents[1]   # project root
 UI_DIR    = Path(__file__).resolve().parent        # ui/
 UPLOAD_DIR = ROOT / "data" / "uploaded"
 ARTIFACTS_DIR = ROOT / "models"
+HISTORY_DIR = ARTIFACTS_DIR / "history"
 RESULTS_PATH = ARTIFACTS_DIR / "latest_results.json"
+
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+HISTORY_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT))
 
 import numpy as np
@@ -52,6 +64,31 @@ if _CORS:
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+# ── Groq LLM Client ─────────────────────────────────────────────────────────
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+groq_client = None
+
+if GROQ_API_KEY and "gsk_" in GROQ_API_KEY:
+    try:
+        from groq import Groq
+        groq_client = Groq(api_key=GROQ_API_KEY)
+        print(f"\n[AI] Initializing Groq reasoning engine...")
+        print(f"[AI] Using Model: {GROQ_MODEL}")
+        
+        # Test connection immediately
+        test_comp = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": "Ping"}],
+            model=GROQ_MODEL,
+            max_tokens=5
+        )
+        print(f"[AI] Groq connectivity verified. AI Reasoning is ACTIVE.\n")
+    except Exception as e:
+        print(f"\n[AI] WARNING: Groq initialization failed: {e}")
+        print("[AI] Reasoning will use rule-based fallbacks.\n")
+else:
+    print("\n[AI] INFO: GROQ_API_KEY not found. AI Reasoning is DISABLED.\n")
 
 # ── In-memory pipeline state ──────────────────────────────────────────────────
 _state: dict = {
@@ -74,6 +111,26 @@ _state: dict = {
 _lock = threading.Lock()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _generate_key_findings(detailed_results, best_model_name):
+    """Generate a summary of the model comparison findings."""
+    if not detailed_results: return "No detailed results available."
+    best = detailed_results.get(best_model_name, {})
+    
+    findings = [
+        f"The <strong>{best_model_name}</strong> model demonstrated the highest overall predictive power with an ROC-AUC of {best.get('ROC_AUC', 0):.3f}."
+    ]
+    
+    xgb = detailed_results.get("XGBoost", {})
+    lr = detailed_results.get("Logistic Regression", {})
+    if xgb.get("ROC_AUC", 0) > lr.get("ROC_AUC", 0) + 0.05:
+        findings.append("XGBoost significantly outperformed Logistic Regression, suggesting complex non-linear patterns in the service requests.")
+        
+    if best.get("Recall", 0) > best.get("Precision", 0):
+        findings.append("Most models prioritize Recall over Precision, ensuring more potential delayed cases are flagged even with some false positives.")
+
+    return " ".join(findings)
+
 
 def _log(msg: str, tag: str = "INFO") -> None:
     ts = datetime.now().strftime("%H:%M:%S")
@@ -165,6 +222,170 @@ def _build_last_trained_case(df: pd.DataFrame | None) -> dict | None:
         "month": value("month"),
         "day_of_week": value("day_of_week"),
         "hour": value("hour"),
+    }
+
+
+def _generate_metric_reasoning(metric_name: str, value: any, delta: float = 0.0) -> str:
+    """Generate human-like reasoning for a metric using Groq LLM if available."""
+    # 1. Fallback base text
+    fallback_text = "Metric is within expected parameters."
+    if metric_name == "Accuracy":
+        if float(value) > 0.85:
+            fallback_text = "The model is showing exceptional predictive strength."
+        else:
+            fallback_text = "Performance is stable, though further feature engineering might help."
+    elif metric_name == "Records Processed":
+        fallback_text = f"Successfully ingested {value} records. Baseline dataset is ready."
+    elif metric_name == "Features Selected":
+        fallback_text = "Dimensionality reduction has focused on the most impactful predictors."
+    elif metric_name == "Best ROC-AUC":
+        fallback_text = f"The current {value} score suggests the model is effective at distinguishing classes."
+
+    # 2. Attempt LLM Reasoning
+    if groq_client:
+        try:
+            prompt = f"""
+            System: You are an expert data science consultant. 
+            User: Provide a very brief (max 25 words) human-readable, professional insight for the following metric:
+            Metric: {metric_name}
+            Current Value: {value}
+            Trend/Delta: {delta}
+            Focus on what this means for the Dallas 311 service request optimization project.
+            """
+            
+            chat_completion = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=GROQ_MODEL,
+                max_tokens=60,
+                temperature=0.7,
+            )
+            llm_text = chat_completion.choices[0].message.content.strip()
+            if llm_text:
+                print(f"[AI] Success: Generated reasoning for '{metric_name}'")
+                return llm_text
+        except Exception as e:
+            print(f"[AI] Reasoning failed for {metric_name}: {str(e)}")
+
+    return fallback_text
+
+
+def _generate_report_reasoning(topic: str, data_summary: str) -> str:
+    """Generate a qualitative report for a complex topic (e.g. Diagnostics or Model Comparison)."""
+    fallback_text = f"The {topic} phase completed successfully with metrics within normal operational bounds."
+    
+    if groq_client:
+        try:
+            prompt = f"""
+            System: You are a senior data science advisor for the City of Dallas 311 Service Requests team.
+            User: Provide a comprehensive, detailed qualitative analysis (approx 150-200 words) based on the following {topic} data.
+            Focus on uncovering deep insights, identifying potential risks, and proposing actionable business values for the City's service optimization objective.
+            
+            {topic} Data:
+            {data_summary}
+            
+            Format: A detailed, professional report with an emphasis on data-driven reasoning.
+            """
+            
+            chat_completion = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=GROQ_MODEL,
+                max_tokens=500,
+                temperature=0.7,
+            )
+            llm_text = chat_completion.choices[0].message.content.strip()
+            if llm_text:
+                print(f"[AI] Success: Generated report for '{topic}'")
+                return llm_text
+        except Exception as e:
+            print(f"[AI] Report reasoning failed for {topic}: {str(e)}")
+            # Improved non-robotic fallback that still references the topic
+            if "ROC" in topic:
+                fallback_text = f"The ROC curve indicates strong model discrimination (API Err: {str(e)[:40]}...)"
+            elif "PR" in topic:
+                fallback_text = f"The Precision-Recall curve suggests robust performance (API Err: {str(e)[:40]}...)"
+            else:
+                fallback_text = f"The analysis for {topic} is based on current metrics (API Err: {str(e)[:40]}...)"
+
+    return fallback_text
+
+
+def _generate_diagnostics_reasoning(diag_dict: dict) -> str:
+    """Convenience wrapper for Diagnostics LLM reasoning."""
+    summary = "\n".join([f"- {k}: {v}" for k, v in diag_dict.items() if not isinstance(v, (list, dict))])
+    if "multicollinear_features" in diag_dict:
+        cols = diag_dict["multicollinear_features"]
+        summary += f"\n- Multicollinear Features Found: {len(cols)} ({', '.join(cols[:5]) if cols else 'None'})"
+    
+    return _generate_report_reasoning("Diagnostics & Data Health", summary)
+
+
+def _generate_model_report(det_results: dict, best_name: str) -> str:
+    """Convenience wrapper for Model Comparison LLM reasoning."""
+    summary_lines = []
+    for name, metrics in det_results.items():
+        summary_lines.append(
+            f"Model: {name} | ROC-AUC: {metrics.get('ROC_AUC', 0):.3f} | Accuracy: {metrics.get('Accuracy', 0):.3f} | F1: {metrics.get('F1_Score', 0):.3f}"
+        )
+    summary = "\n".join(summary_lines)
+    summary += f"\nBest Model identified by agent: {best_name}"
+    
+    return _generate_report_reasoning("Model Performance Comparison", summary)
+
+
+def _generate_confusion_matrix_reasoning(det_results: dict, best_name: str) -> str:
+    """Explain the Confusion Matrix for the best model using actual counts."""
+    best = det_results.get(best_name, {})
+    cm = best.get("confusion_matrix")
+    if not cm: return "No confusion matrix data available."
+    
+    summary = (
+        f"Model: {best_name}\n"
+        f"True Negatives (Correctly predicted Slow Close): {cm[0][0]}\n"
+        f"False Positives (Predicted Fast, but was Slow): {cm[0][1]}\n"
+        f"False Negatives (Predicted Slow, but was Fast - MISSES): {cm[1][0]}\n"
+        f"True Positives (Correctly predicted Fast Close): {cm[1][1]}"
+    )
+    
+    return _generate_report_reasoning("Confusion Matrix Breakdown", summary)
+
+
+def _summarize_curve_shape(curve_dict: dict, type_name: str) -> str:
+    """Downsample a coordinate array into a text-based shape description."""
+    if not curve_dict: return "No curve data."
+    
+    # Extract arrays (keys depend on ROC vs PR)
+    if type_name == "ROC":
+        x_name, y_name = "fpr", "tpr"
+        x_label, y_label = "FPR", "TPR"
+    else:
+        x_name, y_name = "recall", "precision"
+        x_label, y_label = "Recall", "Prec"
+        
+    xs = curve_dict.get(x_name, [])
+    ys = curve_dict.get(y_name, [])
+    
+    if not xs or not ys: return "Curve arrays are empty."
+    
+    # Take 7 samples across the range
+    indices = [0, len(xs)//6, (len(xs)*2)//6, (len(xs)*3)//6, (len(xs)*4)//6, (len(xs)*5)//6, len(xs)-1]
+    samples = []
+    for i in indices:
+        if i < len(xs):
+            samples.append(f"{x_label}: {xs[i]:.2f} -> {y_label}: {ys[i]:.2f}")
+            
+    return f"{type_name} Shape Points: " + " | ".join(samples)
+
+
+def _generate_graph_insights(det_results: dict, best_name: str) -> dict:
+    """Generate high-level visual analysis for ROC and PR curves."""
+    best = det_results.get(best_name, {})
+    
+    roc_summary = _summarize_curve_shape(best.get("roc_curve"), "ROC")
+    pr_summary = _summarize_curve_shape(best.get("pr_curve"), "PR")
+    
+    return {
+        "roc": _generate_report_reasoning("ROC Curve Shape Analysis", roc_summary),
+        "pr":  _generate_report_reasoning("PR Curve Stability Analysis", pr_summary)
     }
 
 
@@ -404,25 +625,39 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _set_progress(80)
 
         # ── 5. Regularization ──────────────────────────────────────────────────
-        _log("RegularizationAgent: Ridge / LASSO / ElasticNet …")
-        _set_agent("RegularizationAgent", "running")
+        skip_reg = os.getenv("SKIP_REGULARIZATION", "False").lower() == "true"
+        
+        if skip_reg:
+            _log("RegularizationAgent: Skipping as requested in .env", "DONE")
+            # Use the best model selection result as the 'regularization' placeholder
+            best_name = model_result['best_model_name']
+            best_auc = model_result['detailed_results'][best_name]['ROC_AUC']
+            reg_result = {
+                "best_method": f"None (Skipped, using {best_name})",
+                "best_roc_auc": float(best_auc),
+                "all_results": {},
+                "coef_summary": pd.DataFrame()
+            }
+        else:
+            _log("RegularizationAgent: Ridge / LASSO / ElasticNet …")
+            _set_agent("RegularizationAgent", "running")
 
-        from agents.regularization_agent import RegularizationAgent
-        ra = RegularizationAgent()
-        reg_result = ra.run(
-            msa.X_train_,
-            msa.y_train_,
-            msa.X_test_,
-            msa.y_test_,
-            feature_names=msa.feature_names_,
-        )
+            from agents.regularization_agent import RegularizationAgent
+            ra = RegularizationAgent()
+            reg_result = ra.run(
+                msa.X_train_,
+                msa.y_train_,
+                msa.X_test_,
+                msa.y_test_,
+                feature_names=msa.feature_names_,
+            )
 
-        _set_agent("RegularizationAgent", "done")
-        _log(
-            f"RegularizationAgent: Best = {reg_result['best_method']} "
-            f"(ROC-AUC = {reg_result['best_roc_auc']})",
-            "DONE",
-        )
+            _set_agent("RegularizationAgent", "done")
+            _log(
+                f"RegularizationAgent: Best = {reg_result['best_method']} "
+                f"(ROC-AUC = {reg_result['best_roc_auc']})",
+                "DONE",
+            )
         _set_progress(100)
 
         # ── Build results payload ──────────────────────────────────────────────
@@ -441,6 +676,11 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 reverse=True,
             )[:10]
 
+        # Enrichment: Key Findings & Detailed metrics
+        det_results = model_result.get("detailed_results", {})
+        split_info = model_result.get("split_info", {})
+        key_findings = _generate_key_findings(det_results, model_result.get("best_model_name"))
+
         # Diagnostics — strip any non-serialisable values
         safe_diag = {
             k: _make_json_safe(v)
@@ -450,13 +690,46 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
 
         finished_at = datetime.now().isoformat()
 
+        # Build top-level 'Metric Objects'
+        metrics = {
+            "records": {
+                "label": "Records Processed",
+                "value": int(df_clean.shape[0]),
+                "delta": 0,
+                "reasoning": _generate_metric_reasoning("Records Processed", int(df_clean.shape[0]))
+            },
+            "features": {
+                "label": "Features Selected",
+                "value": len(feat_imp) if feat_imp else int(df_clean.shape[1]),
+                "reasoning": _generate_metric_reasoning("Features Selected", None)
+            },
+            "accuracy": {
+                "label": "Best ROC-AUC",
+                "value": round(float(reg_result["best_roc_auc"]), 3),
+                "reasoning": _generate_metric_reasoning("Best ROC-AUC", round(float(reg_result["best_roc_auc"]), 3))
+            }
+        }
+
+        finished_at = datetime.now().isoformat()
+
         results = {
-            "models":        comparison,
+            "metrics":       metrics,
+            "models":        [ { **v, "Model": k } for k, v in det_results.items() ],
+            "detailed_results": det_results,
             "best_model":    model_result.get("best_model_name"),
             "diagnostics":   safe_diag,
+            "diagnostics_reasoning": _generate_diagnostics_reasoning(safe_diag),
+            "key_findings":  key_findings,
+            "model_comparison_reasoning": _generate_model_report(det_results, model_result.get("best_model_name")),
+            "confusion_matrix_reasoning": _generate_confusion_matrix_reasoning(det_results, model_result.get("best_model_name")),
+            "graph_insights": _generate_graph_insights(det_results, model_result.get("best_model_name")),
             "data_path":     data_path,
             "started_at":    _state["started_at"],
             "finished_at":   finished_at,
+            "split_info":    split_info,
+            "split_info_reasoning": _generate_report_reasoning("Data Split Analysis", f"Train size: {split_info.get('train_size')} | Test size: {split_info.get('test_size')} | Total: {split_info.get('total_size')}"),
+            "feature_importances": feat_imp,
+            "features_reasoning": _generate_report_reasoning("Feature Importance Analysis", f"Top predictors identified by the best model: {', '.join([f['name'] for f in feat_imp])}"),
             "regularization": {
                 "best_method":  reg_result["best_method"],
                 "best_roc_auc": float(reg_result["best_roc_auc"]),
@@ -493,6 +766,99 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 if v == "running":
                     _state["agents"][k] = "error"
         logger.exception("Pipeline thread exception")
+
+
+def _run_inference(data_path: str, model_path: Path | None = None, enc_path: Path | None = None) -> None:
+    """Fast inference using a specific or the default best model."""
+    m_path = model_path or (ARTIFACTS_DIR / "best_model.joblib")
+    e_path = enc_path or (ARTIFACTS_DIR / "encoders.joblib")
+
+    with _lock:
+        _state.update({
+            "status": "running",
+            "progress": 0,
+            "logs": [],
+            "data_path": data_path,
+            "started_at": datetime.now().isoformat(),
+        })
+        for k in _state["agents"]: _state["agents"][k] = "idle"
+
+    try:
+        _log(f"Inference started using model: {m_path.name}")
+        _set_agent("DataPrepAgent", "running")
+        from agents.data_prep_agent import DataPrepAgent
+        dpa = DataPrepAgent(data_path=data_path)
+        df_clean = dpa.run()
+        _set_agent("DataPrepAgent", "done")
+        _set_progress(30)
+
+        # Check if the data is already transformed (e.g. from a saved test set)
+        if 'Created Date' in df_clean.columns:
+            _set_agent("TransformationAgent", "running")
+            from agents.transformation_agent import TransformationAgent
+            ta = TransformationAgent()
+            df_trans = ta.run(df_clean)
+            _set_agent("TransformationAgent", "done")
+        else:
+            _log("Data appears pre-transformed. Skipping TransformationAgent.")
+            df_trans = df_clean
+            _set_agent("TransformationAgent", "done")
+            
+        _set_progress(60)
+
+        _log("Loading model and encoders...")
+        model = joblib.load(m_path)
+        encoders = joblib.load(e_path)
+
+        # Encode & Clean (Only if RAW data)
+        if 'Created Date' in df_clean.columns:
+            _log("Preprocessing and encoding raw data...")
+            from src.preprocessing import handle_missing_values, handle_service_request_type, encode_categoricals, split_features_target
+            X, y = split_features_target(df_trans)
+            X, _ = handle_missing_values(X, X)
+            X, _ = handle_service_request_type(X, X)
+            X_final, _, _ = encode_categoricals(X, X, initial_encoders=encoders)
+            
+            # Apply Scaling (Inference mode)
+            if "scaler" in encoders:
+                _log("Standardizing features for inference...")
+                scaler = encoders["scaler"]
+                X_cols = X_final.columns
+                X_scaled = scaler.transform(X_final)
+                X_final = pd.DataFrame(X_scaled, columns=X_cols, index=X_final.index)
+        else:
+            _log("Skipping encoding as data is already in final feature space.")
+            X_final, _ = split_features_target(df_trans)
+
+        _log(f"Performing predictions on {len(X_final)} rows...")
+        y_pred = model.predict(X_final)
+        
+        # Build shallow results
+        metrics = {
+            "records": { "label": "Records Inferred", "value": len(X_final), "reasoning": "Batch inference complete." },
+            "accuracy": { "label": "Last Model Strength", "value": "Production", "reasoning": "Using the validated best model from last run." }
+        }
+        
+        results = {
+            "metrics": metrics,
+            "status": "inference_complete",
+            "data_path": data_path,
+            "finished_at": datetime.now().isoformat(),
+            "best_model": "Production Model",
+            "inference_count": len(y_pred)
+        }
+        
+        with _lock:
+            _state["results"] = results
+            _state["status"] = "done"
+            _state["progress"] = 100
+        
+        _log("Inference complete!", "DONE")
+
+    except Exception as exc:
+        _log(f"Inference error: {exc}", "ERR")
+        with _lock: _state["status"] = "error"; _state["error"] = str(exc)
+        logger.exception("Inference thread exception")
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -632,6 +998,146 @@ def run_pipeline():
         "message": "Pipeline execution accepted and started in background.",
         "data_path": str(resolved_data_path),
     }), HTTPStatus.ACCEPTED
+
+
+@app.route("/api/infer", methods=["POST"])
+def infer_pipeline():
+    """Trigger a fast inference run."""
+    with _lock:
+        if _state["status"] == "running":
+            return jsonify({"error": "Conflict: Busy."}), HTTPStatus.CONFLICT
+        if not (ARTIFACTS_DIR / "best_model.joblib").exists():
+            return jsonify({"error": "No model found. Run full pipeline first."}), HTTPStatus.BAD_REQUEST
+
+    body = request.get_json(silent=True) or {}
+    data_path = body.get("data_path")
+    try:
+        resolved_data_path = _resolve_data_path(data_path)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    thread = threading.Thread(
+        target=_run_inference,
+        args=(str(resolved_data_path),),
+        daemon=True,
+        name="inference-runner",
+    )
+    thread.start()
+    return jsonify({"status": "started", "data_path": str(resolved_data_path)}), 202
+
+
+@app.route("/api/history/list", methods=["GET"])
+def list_history():
+    """List all saved models in history."""
+    history = []
+    if not HISTORY_DIR.exists():
+        return jsonify([])
+    
+    for folder in sorted(HISTORY_DIR.iterdir(), reverse=True):
+        if folder.is_dir():
+            meta_path = folder / "metadata.json"
+            if meta_path.exists():
+                try:
+                    with open(meta_path, "r") as f:
+                        meta = json.load(f)
+                        meta["id"] = folder.name
+                        history.append(meta)
+                except Exception as e:
+                    logger.error(f"Error reading history meta in {folder}: {e}")
+    return jsonify(history)
+
+
+@app.route("/api/history/save", methods=["POST"])
+def save_to_history():
+    """Save the current 'latest' model to history with a custom name."""
+    body = request.get_json(silent=True) or {}
+    custom_name = body.get("custom_name", "Untitled Model").strip()
+    
+    if not RESULTS_PATH.exists():
+        return jsonify({"error": "No current results to save."}), 400
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_name = "".join(x for x in custom_name if x.isalnum() or x in "-_ ").replace(" ", "_")
+    folder_name = f"{timestamp}_{safe_name}"
+    target_dir = HISTORY_DIR / folder_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        # Load latest results to get metrics
+        with open(RESULTS_PATH, "r") as f:
+            results = json.load(f)
+            
+        # Copy artifacts
+        files_to_copy = [
+            ("best_model.joblib", "model.joblib"),
+            ("encoders.joblib", "encoders.joblib"),
+            ("latest_test_set.csv", "test_set.csv"),
+            ("latest_results.json", "results.json")
+        ]
+        
+        for src_name, dest_name in files_to_copy:
+            src_path = ARTIFACTS_DIR / src_name
+            if src_path.exists():
+                shutil.copyfile(src_path, target_dir / dest_name)
+        
+        # Save metadata
+        metadata = {
+            "name": custom_name,
+            "timestamp": timestamp,
+            "best_model": results.get("best_model"),
+            "metrics": results.get("metrics", {}),
+            "roc_auc": results.get("models", [{}])[0].get("ROC_AUC"), # Simplified
+            "data_path": results.get("data_path")
+        }
+        with open(target_dir / "metadata.json", "w") as f:
+            json.dump(metadata, f, indent=2)
+            
+        return jsonify({"status": "success", "id": folder_name})
+    except Exception as e:
+        logger.exception("Failed to save to history")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/history/infer", methods=["POST"])
+def infer_from_history():
+    """Run inference using a historical model."""
+    body = request.get_json(silent=True) or {}
+    history_id = body.get("history_id")
+    mode = body.get("mode", "new") # "new" or "original"
+    
+    if not history_id:
+        return jsonify({"error": "history_id required"}), 400
+        
+    model_dir = HISTORY_DIR / history_id
+    if not model_dir.exists():
+        return jsonify({"error": "History item not found"}), 404
+        
+    # Determine data path
+    if mode == "original":
+        data_path = model_dir / "test_set.csv"
+        if not data_path.exists():
+            return jsonify({"error": "Original test set not found"}), 400
+    else:
+        data_path = body.get("data_path")
+        if not data_path:
+            return jsonify({"error": "data_path required for new inference"}), 400
+        try:
+           data_path = _resolve_data_path(data_path)
+        except Exception as e:
+           return jsonify({"error": str(e)}), 400
+
+    thread = threading.Thread(
+        target=_run_inference,
+        kwargs={
+            "data_path": str(data_path),
+            "model_path": model_dir / "model.joblib",
+            "enc_path": model_dir / "encoders.joblib"
+        },
+        daemon=True,
+        name="history-inference-runner",
+    )
+    thread.start()
+    return jsonify({"status": "started", "model": history_id, "data": str(data_path)}), 202
 
 
 @app.route("/api/reset", methods=["POST"])

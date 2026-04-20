@@ -9,7 +9,13 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     roc_auc_score,
+    roc_curve,
+    precision_recall_curve,
+    f1_score,
+    precision_score,
+    recall_score
 )
+import numpy as np
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 
@@ -17,17 +23,45 @@ from . import config
 
 
 def evaluate_model(name: str, model, X_test, y_test):
-    """Print accuracy, ROC-AUC, classification report, and confusion matrix."""
+    """Calculate and return a comprehensive metrics dictionary."""
     y_pred = model.predict(X_test)
     y_prob = model.predict_proba(X_test)[:, 1]
 
-    print(f"\n===== {name} =====")
-    print("Accuracy:", accuracy_score(y_test, y_pred))
-    print("ROC-AUC:", roc_auc_score(y_test, y_prob))
-    print("\nClassification Report:\n", classification_report(y_test, y_pred))
-    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+    # Standard Scores
+    results = {
+        "Accuracy": accuracy_score(y_test, y_pred),
+        "ROC_AUC": roc_auc_score(y_test, y_prob),
+        "F1_Score": f1_score(y_test, y_pred),
+        "Precision": precision_score(y_test, y_pred),
+        "Recall": recall_score(y_test, y_pred),
+    }
 
-    return y_pred, y_prob
+    # Confusion Matrix
+    results["confusion_matrix"] = confusion_matrix(y_test, y_pred).tolist()
+
+    # ROC Curve (Downsample to 50 points)
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    step = max(1, len(fpr) // 50)
+    results["roc_curve"] = {"fpr": fpr[::step].tolist(), "tpr": tpr[::step].tolist()}
+
+    # PR Curve (Downsample to 50 points)
+    prec, rec, _ = precision_recall_curve(y_test, y_prob)
+    step = max(1, len(prec) // 50)
+    results["pr_curve"] = {"precision": prec[::step].tolist(), "recall": rec[::step].tolist()}
+
+    # Threshold Tuning (Precision/Recall vs Threshold)
+    thresholds = np.linspace(0, 1, 21)
+    t_metrics = []
+    for t in thresholds:
+        tp = (y_prob >= t).astype(int)
+        t_metrics.append({
+            "threshold": float(t),
+            "precision": float(precision_score(y_test, tp, zero_division=0)),
+            "recall": float(recall_score(y_test, tp, zero_division=0))
+        })
+    results["threshold_tuning"] = t_metrics
+
+    return results
 
 
 def compare_models(results: dict, y_test):
