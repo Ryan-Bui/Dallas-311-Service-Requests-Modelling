@@ -14,3 +14,5 @@ flask
 flask-cors
 xgboost
 matplotlib
+gunicorn
+groq
