@@ -1,0 +1,25 @@
+{
+  "name": "lkk",
+  "timestamp": "20260420_193111",
+  "best_model": "XGBoost",
+  "metrics": {
+    "records": {
+      "label": "Records Processed",
+      "value": 5000,
+      "delta": 0,
+      "reasoning": "1. **Strategic Insight**: 5000 records processed indicates efficient operations.\n2. **Operational Context**: Inconsistent naming in Transportation and Public Works affects data integrity.\n3. **Recommended Action**: Standardize department naming conventions."
+    },
+    "features": {
+      "label": "Features Selected",
+      "value": 10,
+      "reasoning": "1. **Strategic Insight**: Inconsistent naming hinders data analysis.\n2. **Operational Context**: Transportation and Public Works Department has inconsistent records.\n3. **Recommended Action**: Standardize department naming conventions."
+    },
+    "accuracy": {
+      "label": "Best ROC-AUC",
+      "value": 0.839,
+      "reasoning": "1. **Strategic Insight**: The Best ROC-AUC value of 0.839 indicates moderate predictive accuracy.\n2. **Operational Context**: This metric relates to Transportation and Public Works departmental data.\n3. **Recommended Action**: Optimize departmental data analytics for improved performance."
+    }
+  },
+  "roc_auc": 0.7036601886540005,
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\data\\uploaded\\sample.csv"
+}

@@ -10,8 +10,6 @@ COLUMNS_TO_DROP_INITIAL = [
     'Service Request Number',
     'Unique Key',
     'Address',
-    'Overall Service Request Due Date',
-    'Created Date',
 ]
 
 # Minimum count threshold for grouping rare departments
@@ -33,7 +31,9 @@ LEAKAGE_COLUMNS = [
     'Update Date',      # leakage
     'Status',           # leakage
     'Outcome',          # borderline leakage
-    'Lat_Long Location' # messy/high precision
+    'Lat_Long Location', # messy/high precision
+    'Overall Service Request Due Date', # high cardinality string
+    'Created Date' # high cardinality string (processed already)
 ]
 
 # Number of top service-request types to keep (rest become "Other")
