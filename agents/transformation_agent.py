@@ -28,8 +28,10 @@ from src.feature_engineering import (
     remove_invalid_rows,
     add_time_features,
     create_binary_target,
+    create_regression_target,
 )
 from src.preprocessing import drop_leakage_columns, clean_ert
+from src import config
 
 from .base_agent import BaseAgent
 
@@ -69,8 +71,11 @@ class TransformationAgent(BaseAgent):
         logger.info("[TransformationAgent] Adding calendar time features …")
         df = add_time_features(df)
 
-        logger.info("[TransformationAgent] Creating binary target …")
-        df = create_binary_target(df)
+        logger.info("[TransformationAgent] Creating target column …")
+        if config.REGRESSION_MODE:
+            df = create_regression_target(df)   # target = hours_to_close (continuous)
+        else:
+            df = create_binary_target(df)        # target = 0/1 (fast/slow)
 
         logger.info("[TransformationAgent] Dropping leakage columns …")
         df = drop_leakage_columns(df)

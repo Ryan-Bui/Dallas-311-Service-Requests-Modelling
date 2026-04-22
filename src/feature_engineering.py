@@ -61,3 +61,19 @@ def create_binary_target(
     print("\nTarget proportion:")
     print(df['target'].value_counts(normalize=True))
     return df
+
+
+def create_regression_target(df: pd.DataFrame) -> pd.DataFrame:
+    """Expose hours_to_close as the regression target column.
+
+    Adds a ``target`` column equal to ``days_to_close`` (which is stored in
+    hours despite its name) so that ModelSelectionAgent can treat both
+    classification and regression identically via the same ``target`` column.
+
+    Call this instead of ``create_binary_target`` when
+    ``config.REGRESSION_MODE = True``.
+    """
+    df['target'] = df['days_to_close'].copy()
+    print("\nRegression target (hours_to_close) summary:")
+    print(df['target'].describe().round(2))
+    return df

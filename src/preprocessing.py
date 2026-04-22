@@ -145,8 +145,16 @@ def split_features_target(df: pd.DataFrame):
     return X, y
 
 
-def split_train_test(X, y, test_size=None, random_state=None):
-    """Stratified train-test split."""
+def split_train_test(X, y, test_size=None, random_state=None, stratify=True):
+    """Train-test split.
+
+    Parameters
+    ----------
+    stratify : bool
+        Pass True (default) for classification targets to preserve class
+        proportions in both splits.  Pass False for regression targets —
+        stratify= requires a discrete array and will raise if y is continuous.
+    """
     if test_size is None:
         test_size = config.TEST_SIZE
     if random_state is None:
@@ -156,7 +164,7 @@ def split_train_test(X, y, test_size=None, random_state=None):
         X, y,
         test_size=test_size,
         random_state=random_state,
-        stratify=y,
+        stratify=y if stratify else None,
     )
     print("\nTrain size:", X_train.shape, y_train.shape)
     print("Test size:", X_test.shape, y_test.shape)
