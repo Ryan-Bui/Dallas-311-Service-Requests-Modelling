@@ -25,15 +25,18 @@ DATE_FORMAT = '%Y %b %d %I:%M:%S %p'
 # Binary target threshold (hours) — "fast" means closed within 72 hours
 TARGET_THRESHOLD_HOURS = 72
 
+# ── Regression mode ──────────────────────────────────────────────────────────
+# Set to True to predict hours_to_close directly instead of the binary target.
+# When True, ModelSelectionAgent trains regressors and evaluates with RMSE/MAE/R².
+REGRESSION_MODE = False
+
 # Columns to drop to avoid data leakage
 LEAKAGE_COLUMNS = [
     'Closed Date',      # leakage
     'Update Date',      # leakage
     'Status',           # leakage
     'Outcome',          # borderline leakage
-    'Lat_Long Location', # messy/high precision
-    'Overall Service Request Due Date', # high cardinality string
-    'Created Date' # high cardinality string (processed already)
+    'Lat_Long Location' # messy/high precision
 ]
 
 # Number of top service-request types to keep (rest become "Other")
@@ -78,3 +81,38 @@ RF_PARAM_GRID = {
 
 RF_TUNING_N_ITER = 10
 RF_TUNING_CV = 3
+
+# ── Decision Tree Regressor ──────────────────────────────────────────────────
+DT_MAX_DEPTH = 10
+DT_MIN_SAMPLES_SPLIT = 10
+DT_MIN_SAMPLES_LEAF = 5
+
+# ── Random Forest Regressor ──────────────────────────────────────────────────
+RFR_N_ESTIMATORS = 200
+RFR_MAX_DEPTH = 10
+RFR_MIN_SAMPLES_SPLIT = 10
+RFR_MIN_SAMPLES_LEAF = 5
+
+# ── Gradient Boosting Regressor (sklearn) ────────────────────────────────────
+GBR_N_ESTIMATORS = 200
+GBR_MAX_DEPTH = 5
+GBR_LEARNING_RATE = 0.05
+GBR_SUBSAMPLE = 0.8
+GBR_MIN_SAMPLES_LEAF = 5
+
+# ── XGBoost Regressor ────────────────────────────────────────────────────────
+XGBR_N_ESTIMATORS = 200
+XGBR_MAX_DEPTH = 6
+XGBR_LEARNING_RATE = 0.1
+XGBR_SUBSAMPLE = 0.8
+XGBR_COLSAMPLE_BYTREE = 0.8
+
+# ── Regression tuning grid (shared across tree regressors) ──────────────────
+REG_PARAM_GRID = {
+    'n_estimators':     [100, 200, 300],
+    'max_depth':        [4, 6, 8, 10, None],
+    'min_samples_leaf': [1, 3, 5, 10],
+    'learning_rate':    [0.01, 0.05, 0.1],   # GBR / XGBoost only
+}
+REG_TUNING_N_ITER = 15
+REG_TUNING_CV = 3
