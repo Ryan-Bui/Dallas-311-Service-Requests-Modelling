@@ -114,19 +114,25 @@ def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame, initial_enc
 
 
 def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame):
-    """Fill numeric NaNs with the train median; cast bools to int."""
-    numeric_cols = [col for col in X_train.columns if X_train[col].dtype in ['int64', 'float64']]
-    
-    if len(numeric_cols) > 0:
+    """Fill numeric NaNs with median and categorical NaNs with most frequent."""
+    # 1. Numeric Imputation
+    numeric_cols = X_train.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    if numeric_cols:
         imputer = SimpleImputer(strategy='median')
         X_train[numeric_cols] = imputer.fit_transform(X_train[numeric_cols])
         X_test[numeric_cols] = imputer.transform(X_test[numeric_cols])
 
-    bool_cols_train = X_train.select_dtypes(include=['bool']).columns
-    X_train[bool_cols_train] = X_train[bool_cols_train].astype(int)
+    # 2. Categorical Imputation
+    cat_cols = X_train.select_dtypes(include=['object']).columns.tolist()
+    if cat_cols:
+        cat_imputer = SimpleImputer(strategy='most_frequent')
+        X_train[cat_cols] = cat_imputer.fit_transform(X_train[cat_cols])
+        X_test[cat_cols] = cat_imputer.transform(X_test[cat_cols])
 
-    bool_cols_test = X_test.select_dtypes(include=['bool']).columns
-    X_test[bool_cols_test] = X_test[bool_cols_test].astype(int)
+    # 3. Boolean to int
+    bool_cols = X_train.select_dtypes(include=['bool']).columns.tolist()
+    X_train[bool_cols] = X_train[bool_cols].astype(int)
+    X_test[bool_cols] = X_test[bool_cols].astype(int)
 
     print("\nTotal missing values in train after cleaning:", X_train.isnull().sum().sum())
     return X_train, X_test

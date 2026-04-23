@@ -66,21 +66,14 @@ def evaluate_model(name: str, model, X_test, y_test):
 
 def compare_models(results: dict, y_test):
     """
-    Compare multiple models side-by-side.
-
-    Parameters
-    ----------
-    results : dict[str, tuple[y_pred, y_prob]]
-        Mapping from model name to (y_pred, y_prob) tuple.
-    y_test : array-like
-        True labels.
+    Compare multiple models side-by-side using pre-calculated metrics.
     """
     rows = []
-    for name, (y_pred, y_prob) in results.items():
+    for name, metrics in results.items():
         rows.append({
             'Model': name,
-            'Accuracy': accuracy_score(y_test, y_pred),
-            'ROC_AUC': roc_auc_score(y_test, y_prob),
+            'Accuracy': metrics.get('Accuracy'),
+            'ROC_AUC': metrics.get('ROC_AUC'),
         })
 
     comparison = pd.DataFrame(rows)

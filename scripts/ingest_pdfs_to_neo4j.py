@@ -24,10 +24,10 @@ def ingest_pdfs():
         print(f"Directory {REPORTS_DIR} not found.")
         return
 
-    from langchain_google_vertexai import VertexAIEmbeddings
-    embeddings_service = VertexAIEmbeddings(
-        model_name="text-embedding-004",
-        project=PROJECT_ID
+    # Use the same model as the main RAG chain for consistency
+    embeddings_service = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-001",
+        google_api_key=os.getenv("GOOGLE_API_KEY")
     )
     
     driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))

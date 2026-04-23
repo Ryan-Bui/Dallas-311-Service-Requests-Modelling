@@ -1,0 +1,25 @@
+{
+  "name": "ijmodel",
+  "timestamp": "20260422_224322",
+  "best_model": "XGBoost",
+  "metrics": {
+    "records": {
+      "label": "Records Processed",
+      "value": 5000,
+      "delta": 0,
+      "reasoning": "Team Wisdom: Click to see how this affects our sanitation routes."
+    },
+    "features": {
+      "label": "Features Selected",
+      "value": 10,
+      "reasoning": "Team Wisdom: Click to see why these predictors matter to Dallas."
+    },
+    "accuracy": {
+      "label": "Best ROC-AUC",
+      "value": 0.838,
+      "reasoning": "Team Wisdom: Click to see if this model is city-ready."
+    }
+  },
+  "roc_auc": 0.8196107972379159,
+  "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\data\\uploaded\\sample1.csv"
+}

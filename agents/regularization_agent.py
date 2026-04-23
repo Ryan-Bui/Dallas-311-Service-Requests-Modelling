@@ -67,8 +67,10 @@ class RegularizationAgent(BaseAgent):
             Keys: 'best_method', 'best_roc_auc', 'coef_summary' (DataFrame)
         """
         cols = feature_names or (list(X_train.columns) if hasattr(X_train, "columns") else None)
-        X_tr = np.array(X_train)
-        X_te = np.array(X_test)
+        
+        # Data Scrubbing: handle NaNs or Infinite values that sklearn hates
+        X_tr = pd.DataFrame(X_train).fillna(0).replace([np.inf, -np.inf], 0).values
+        X_te = pd.DataFrame(X_test).fillna(0).replace([np.inf, -np.inf], 0).values
         y_tr = np.array(y_train)
         y_te = np.array(y_test)
 

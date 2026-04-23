@@ -4,10 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dallas 311 — ML Dashboard</title>
+  <title>Dallas 311 Intelligence | Expert ML Dashboard</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
@@ -124,6 +125,29 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
+    }
+
+    /* Universal card hover and interactivity */
+    .kpi-card, .data-card, .agent-status-panel, .history-card, .chart-card, .card, .chart-container, .model-row {
+      cursor: pointer !important;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease !important;
+    }
+    
+    .kpi-card:hover, .data-card:hover, .agent-status-panel:hover, .history-card:hover, .chart-card:hover, .card:hover, .chart-container:hover {
+      transform: translateY(-8px) scale(1.005);
+      box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.2), 0 15px 15px -5px rgba(0, 0, 0, 0.1) !important;
+      border-color: var(--accent-color) !important;
+      z-index: 10;
+    }
+    
+    /* Ensure child elements don't block the pointer */
+    .kpi-card *, .data-card *, .chart-card *, .card * {
+      pointer-events: none;
+    }
+    /* ... but allow the reasoning links to work */
+    .ai-reasoning, .ai-reasoning *, button, a, .chat-btn, .chat-panel * {
+      pointer-events: auto !important;
     }
 
     .kpi-card {
@@ -674,7 +698,7 @@
         </section>
 
         <section style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-          <div class="data-card" onclick="this.classList.toggle('expanded')">
+          <div class="data-card" onclick="toggleChatWithContext('Threshold Tuning', 'Statistical Optimization')">
             <h2 style="font-size: var(--text-xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
               Threshold Tuning</h2>
             <div style="height: 250px;"><canvas id="thresholdChart"></canvas></div>
@@ -682,7 +706,7 @@
               <strong>Business Optimization:</strong> This lets us choose the mathematical cutoff (Threshold). Shifting it left captures more potential delayed cases but might increase "false alarms." We aim for the intersection of Precision and Recall.
             </div>
           </div>
-          <div class="data-card" onclick="this.classList.toggle('expanded')">
+          <div class="data-card" onclick="toggleChatWithContext('Meta: Key Findings', 'City Operations Overview')">
             <h2 style="font-size: var(--text-xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
               Meta: Key Findings & Splits</h2>
             <div id="key-findings"
@@ -697,7 +721,7 @@
         </section>
 
         <section style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; display: none;" id="results-sections">
-          <div class="data-card" onclick="this.classList.toggle('expanded')">
+          <div class="data-card" onclick="toggleChatWithContext('Model Comparison', 'ML Performance Audit')">
             <h2 style="font-size: var(--text-xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
               Model Comparison</h2>
             <table class="table">
@@ -713,7 +737,7 @@
             </table>
             <div id="model-table-reasoning" class="card-insight"></div>
           </div>
-          <div class="data-card" onclick="this.classList.toggle('expanded')">
+          <div class="data-card" onclick="toggleChatWithContext('Diagnostics Review', 'Data Health Audit')">
             <h2 style="font-size: var(--text-xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
               Diagnostics</h2>
             <div id="diag-container" style="margin-top: 12px;"></div>
@@ -722,7 +746,7 @@
         </section>
 
         <section id="features-section" style="display: none; margin-top: 24px;">
-          <div class="data-card" onclick="this.classList.toggle('expanded')">
+          <div class="data-card" onclick="toggleChatWithContext('Top Predictors Analysis', 'Feature Contribution Review')">
             <h2 style="font-size: var(--text-xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
               Top Predictors (Feature Importance)</h2>
             <div style="height: 480px; margin-top: 12px;"><canvas id="featuresChart"></canvas></div>
@@ -915,21 +939,27 @@
         "ReinforcementJudge": "idle"
       }
     };
-    let _session_id = 'session_' + Math.random().toString(36).substr(2, 9);
     
     // --- Chat Logic ---
+    // --- Global State ---
+    let _session_id = 'session_' + Math.random().toString(36).substring(7);
+    let _currentResults = null;
+
     function toggleChat() {
         const panel = document.getElementById('chat-panel');
         panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
     }
 
     async function toggleChatWithContext(metricName, value) {
+        console.log(`[AI-Chat] Triggered for: ${metricName} with value: ${value}`);
         const panel = document.getElementById('chat-panel');
         if (panel.style.display !== 'flex') toggleChat();
         
         const input = document.getElementById('chat-input');
         input.value = `Tell me more about the ${metricName} of ${value} based on Neo4j Graph.`;
-        sendChatMessage();
+        
+        // Wait 100ms to ensure the input is locked in
+        setTimeout(() => sendChatMessage(), 100);
     }
 
     async function sendChatMessage() {
@@ -954,22 +984,25 @@
         container.appendChild(loadingMsg);
 
         try {
+            console.log(`[AI-Chat] Sending query to RAG: "${text}"`);
             const resp = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     message: text,
                     session_id: _session_id,
-                    department: _data ? _data.best_model_name : null // Pass best model context if available
+                    department: _currentResults ? (_currentResults.best_model || _currentResults.best_model_name) : null
                 })
             });
             const data = await resp.json();
+            console.log("[AI-Chat] Received reply from LLM.");
             
             // Replace loading with real answer
             loadingMsg.innerHTML = marked.parse(data.answer);
             container.scrollTop = container.scrollHeight;
         } catch (e) {
-            loadingMsg.innerText = 'Error: Could not reach Expert AI.';
+            console.error("[AI-Chat] Chat failed:", e);
+            loadingMsg.innerText = 'Error: Could not reach Expert AI. Check your console.';
         }
     }
   </script>
@@ -1048,9 +1081,28 @@
       "Recall": "Of all actual 'Fast Close' cases, what percentage did the model correctly identify? High recall means fewer missed opportunities."
     };
 
+    // ── GLOBAL INTERACTION SHIELD ──────────────────────────────────────────
+    // This catches ALL clicks and ensures cards trigger chat instead of expansion
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.kpi-card, .data-card, .history-card, .agent-item');
+        if (!card) return;
+        
+        // Prevent legacy expansion or other default behaviors
+        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && !e.target.closest('.ai-reasoning')) {
+            // Find context from the card
+            const label = card.querySelector('.kpi-label, .history-name, h2, .agent-name')?.innerText || 'Card Analysis';
+            const val = card.querySelector('.kpi-value, .stat-val')?.innerText || 'Expert Inquiry';
+            
+            toggleChatWithContext(label, val);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }, true); // Use capture phase to intercept before children
+
     function updateDashboard(data) {
       if (!data) return;
       const results = data.results || data;
+      _currentResults = results; // Save globally for Chat Context
       const metrics = results.metrics || {};
 
       // Expert AI Reasoning is now distributed into individual metrics reasoning fields.

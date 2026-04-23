@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -69,7 +69,7 @@ class Neo4jChatMemory:
     def close(self):
         self.driver.close()
 
-def get_domain_context(department: str = None, service_type: str = None, **kwargs) -> str:
+def get_domain_context(department: str = None, service_type: str = None, user_query: str = None, **kwargs) -> str:
     """
     Expert Hybrid Retrieval: 
     1. Cypher lookup against Neo4j Graph (Structured Audit Rules).
@@ -98,9 +98,14 @@ def get_domain_context(department: str = None, service_type: str = None, **kwarg
                     context_parts.append(f"- Audit Focus: {record['topic']} (Goal: {record['objective']})")
 
         # --- PART 2: Vector Search with Neo4j Natively ---
-        embeddings_service = VertexAIEmbeddings(model_name="text-embedding-004")
-        search_query = f"Staffing, budget, and performance impacts for department {department or 'Dallas 311'}"
-        query_embedding = embeddings_service.embed_query(search_query)
+        # Switch to GoogleGenerativeAIEmbeddings (AI Studio) to bypass project ID requirements
+        embeddings_service = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-001",
+            google_api_key=os.getenv("GOOGLE_API_KEY")
+        )
+        # 0. Set dynamic search query
+        final_search_query = user_query if user_query else f"Staffing, budget, and performance for {department or 'Dallas 311'}"
+        query_embedding = embeddings_service.embed_query(final_search_query)
         
         with driver.session() as session:
             # 0. Fetch Expert Human Wisdom (The Golden Source)
@@ -126,19 +131,19 @@ def get_domain_context(department: str = None, service_type: str = None, **kwarg
                 context_parts.append("\n- WEB-OPTIMIZED INSIGHTS (Explorer Agent):")
                 context_parts.append(f"  [Updated: {insight_record['ts']}] {insight_record['content'][:500]}...")
 
-            # 2. Fetch Top 1 Golden Source (High priority)
-            golden_cypher = """
+            # 2. Fetch Top 1 Audit Report Source (High priority)
+            report_source_cypher = """
             CALL db.index.vector.queryNodes('chunk_embeddings', 5, $emb) 
             YIELD node, score 
-            WHERE node.type = 'Golden'
+            WHERE node.type = 'Report'
             RETURN node.content AS content, node.source AS source
-            LIMIT 1
+            LIMIT 2
             """
-            golden_results = session.run(golden_cypher, emb=query_embedding)
-            golden_record = golden_results.single()
-            if golden_record:
+            report_results = session.run(report_source_cypher, emb=query_embedding)
+            report_record = report_results.peek() # Use peek to avoid consuming if multiple
+            if report_record:
                 context_parts.append("\n- GOLDEN BUSINESS RULES (High Priority):")
-                context_parts.append(f"  [Ref: {golden_record['source']}] {golden_record['content'][:500]}...")
+                context_parts.append(f"  [Ref: {report_record['source']}] {report_record['content'][:500]}...")
 
             # 2. Fetch Top 2 Report Sources (Contextual)
             report_cypher = """
@@ -222,7 +227,8 @@ def create_explainability_chain(provider: str = None):
             "coef_summary": lambda x: x["coef_summary"],
             "domain_context": lambda x: get_domain_context(
                 department=x.get("department"), 
-                district=x.get("district")
+                service_type=x.get("service_type"),
+                user_query=x.get("query")
             )
         } 
         | prompt 

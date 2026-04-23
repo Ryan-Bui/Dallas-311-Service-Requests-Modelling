@@ -56,6 +56,8 @@ try:
     from flask_cors import CORS as _CORS
 except ImportError:
     _CORS = None  # optional — not needed for same-origin requests
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 from inference.explainability_chain import create_explainability_chain, format_coef_summary, get_domain_context, Neo4jChatMemory
 from inference.llm_factory import get_llm
@@ -669,44 +671,41 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
 
         # ── 5. Regularization ──────────────────────────────────────────────────
         skip_reg = os.getenv("SKIP_REGULARIZATION", "False").lower() == "true"
+        reg_result = {} # Default
         
         if skip_reg:
-            _log("RegularizationAgent: Skipping as requested in .env", "DONE")
-            # Use the best model selection result as the 'regularization' placeholder
-            best_name = model_result['best_model_name']
-            best_auc = model_result['detailed_results'][best_name]['ROC_AUC']
+            _log("RegularizationAgent: Bypassed via .env (Idle)", "INFO")
             reg_result = {
-                "best_method": f"None (Skipped, using {best_name})",
-                "best_roc_auc": float(best_auc),
-                "all_results": {},
-                "coef_summary": pd.DataFrame()
+                "best_method": f"None (Skipped)",
+                "best_roc_auc": float(model_result['detailed_results'][model_result['best_model_name']]['ROC_AUC']),
+                "all_results": {}, "coef_summary": pd.DataFrame()
             }
         else:
-            _log("RegularizationAgent: Ridge / LASSO / ElasticNet …")
-            _set_agent("RegularizationAgent", "running")
-
-            from agents.regularization_agent import RegularizationAgent
-            ra = RegularizationAgent()
-            reg_result = ra.run(
-                msa.X_train_,
-                msa.y_train_,
-                msa.X_test_,
-                msa.y_test_,
-                feature_names=msa.feature_names_,
-            )
-
-            _set_agent("RegularizationAgent", "done")
-            _log(
-                f"RegularizationAgent: Best = {reg_result['best_method']} "
-                f"(ROC-AUC = {reg_result['best_roc_auc']})",
-                "DONE",
-            )
+            try:
+                _log("RegularizationAgent: fitting Ridge/LASSO/ElasticNet …")
+                _set_agent("RegularizationAgent", "running")
+                from agents.regularization_agent import RegularizationAgent
+                ra = RegularizationAgent()
+                # Ensure we use the return value from the msa.run (model_result)
+                reg_result = ra.run(
+                    model_result.get('X_train_encoded'), 
+                    model_result.get('y_train'),
+                    model_result.get('X_test_encoded'),
+                    model_result.get('y_test'),
+                    feature_names=model_result.get('feature_names')
+                )
+                _set_agent("RegularizationAgent", "done")
+            except Exception as e:
+                _log(f"RegularizationAgent failed: {e}", "WARNING")
+                _set_agent("RegularizationAgent", "error")
+                reg_result = {"best_method": "Regression Error", "best_roc_auc": 0.0, "all_results": {}, "coef_summary": pd.DataFrame()}
+        
         _set_progress(95)
 
         # ── 6. Intelligent Enrichment (Phase 2) ───────────────────────────────
         _log("ExplorerAgent: Searching for real-time city updates …")
-        _set_agent("ExplorerAgent", "running")
         try:
+            _set_agent("ExplorerAgent", "running")
             from agents.explorer_agent import ExplorerAgent
             explorer = ExplorerAgent()
             
@@ -782,17 +781,17 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 "label": "Records Processed",
                 "value": int(df_clean.shape[0]),
                 "delta": 0,
-                "reasoning": _generate_metric_reasoning("Records Processed", int(df_clean.shape[0]), domain_context=domain_context)
+                "reasoning": "Team Wisdom: Click to see how this affects our sanitation routes."
             },
             "features": {
                 "label": "Features Selected",
                 "value": len(feat_imp) if feat_imp else int(df_clean.shape[1]),
-                "reasoning": _generate_metric_reasoning("Features Selected", None, domain_context=domain_context)
+                "reasoning": "Team Wisdom: Click to see why these predictors matter to Dallas."
             },
             "accuracy": {
                 "label": "Best ROC-AUC",
                 "value": round(float(reg_result["best_roc_auc"]), 3),
-                "reasoning": _generate_metric_reasoning("Best ROC-AUC", round(float(reg_result["best_roc_auc"]), 3), domain_context=domain_context)
+                "reasoning": "Team Wisdom: Click to see if this model is city-ready."
             }
         }
 
@@ -804,18 +803,18 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             "detailed_results": det_results,
             "best_model":    model_result.get("best_model_name"),
             "diagnostics":   safe_diag,
-            "diagnostics_reasoning": _generate_diagnostics_reasoning(safe_diag),
+            "diagnostics_reasoning": "Strategic Vetting: Click to ask Expert AI about data health.",
             "key_findings":  key_findings,
-            "model_comparison_reasoning": _generate_model_report(det_results, model_result.get("best_model_name")),
-            "confusion_matrix_reasoning": _generate_confusion_matrix_reasoning(det_results, model_result.get("best_model_name")),
-            "graph_insights": _generate_graph_insights(det_results, model_result.get("best_model_name")),
+            "model_comparison_reasoning": "Strategic Vetting: Click to compare model architectures.",
+            "confusion_matrix_reasoning": "Strategic Vetting: Click to see our error profile.",
+            "graph_insights": {"roc": "Visual Analysis ready.", "pr": "Stability check ready."},
             "data_path":     data_path,
             "started_at":    _state["started_at"],
             "finished_at":   finished_at,
             "split_info":    split_info,
-            "split_info_reasoning": _generate_report_reasoning("Data Split Analysis", f"Train size: {split_info.get('train_size')} | Test size: {split_info.get('test_size')} | Total: {split_info.get('total_size')}"),
+            "split_info_reasoning": "Strategic Vetting: Click to see training distributions.",
             "feature_importances": feat_imp,
-            "features_reasoning": _generate_features_reasoning(feat_imp, domain_context=domain_context),
+            "features_reasoning": "Strategic Vetting: Click to see domain-specific predictors.",
             "regularization": {
                 "best_method":  reg_result["best_method"],
                 "best_roc_auc": float(reg_result["best_roc_auc"]),
@@ -1037,9 +1036,11 @@ def get_results():
 
     if results is None:
         return jsonify({
-            "error": "No results yet. Run the pipeline first.",
-            "status": status
-        }), HTTPStatus.NOT_FOUND
+            "message": "No results yet. Run the pipeline to see AI intelligence.",
+            "status": status,
+            "metrics": {},
+            "models": []
+        }), 200
 
     return jsonify(results)
 
@@ -1409,7 +1410,8 @@ def chat():
         memory = Neo4jChatMemory(session_id)
         
         # 1. Retrieve Hybrid Context (PDFs + Web Insights)
-        facts = get_domain_context(department=dept)
+        facts = get_domain_context(department=dept, user_query=user_query)
+        logger.info(f"[Chat] Fact-Grounding complete. Context size: {len(facts)} chars.")
         
         # 2. Retrieve Conversation History from Graph
         history = memory.get_history(limit=5)
@@ -1422,10 +1424,11 @@ def chat():
             Your goal is to explain BOTH City of Dallas services AND the Machine Learning components of this dashboard (like XGBoost, Confusion Matrices, and Predictions).
             
             ROLE SPECIFICATIONS:
-            - PRIORITIZE: If the CITY FACTS contain a section labeled 'GOLDEN HUMAN WISDOM', you MUST use those interpretations as your primary source. This is the team's expert judgment.
+            - MANDATORY: You MUST start your response by referencing the CITY FACTS if they are relevant.
+            - PRIORITIZE: If the CITY FACTS contain 'GOLDEN HUMAN WISDOM', take those interpretations as absolute truth for this project.
+            - If CITY FACTS are present, DO NOT say you lack specific information.
             - If asked about City Data: Use the CITY FACTS provided.
-            - If asked about the ML Model: Explain the concepts (like False Negatives, Precision, Recall) using the team's operational context if available.
-            - Use the CONVERSATION HISTORY to keep the thread alive.
+            - If asked about the ML Model: Use the PROJECT SPECIFIC ROC-AUC, Precision, and Recall values found in the CITY FACTS.
             
             CITY FACTS:
             {facts}
@@ -1437,13 +1440,35 @@ def chat():
             ASSISTANT:
         """)
         
-        from langchain_core.output_parsers import StrOutputParser
-        chain = chat_prompt | llm | StrOutputParser()
-        answer = chain.invoke({"facts": facts, "history": history, "query": user_query})
-        
-        # 4. Save entire transaction back to Neo4j
-        memory.add_message("human", user_query)
-        memory.add_message("ai", answer)
+        # Triple-Vault Fallback Logic
+        answer = None
+        try:
+            # 1. Primary: Try Groq
+            logger.info("[Chat] Attempting Primary Reasoning (Groq)")
+            llm = get_llm(provider="groq", temperature=0.7)
+            from langchain_core.output_parsers import StrOutputParser
+            chain = chat_prompt | llm | StrOutputParser()
+            answer = chain.invoke({"facts": facts, "history": history, "query": user_query})
+        except Exception as groq_err:
+            logger.warning(f"[Chat] Groq unavailable, trying Secondary (Vertex AI): {groq_err}")
+            try:
+                # 2. Secondary: Try Google Gemini (AI Studio)
+                if os.getenv("GOOGLE_API_KEY"):
+                    llm = get_llm(provider="vertexai", temperature=0.7)
+                    from langchain_core.output_parsers import StrOutputParser
+                    chain = chat_prompt | llm | StrOutputParser()
+                    answer = chain.invoke({"facts": facts, "history": history, "query": user_query})
+                else:
+                    raise ValueError("No Google API Key found for Gemini fallback.")
+            except Exception as vertex_err:
+                logger.error(f"[Chat] All AI Providers failed: {vertex_err}")
+                # 3. Final Fallback: Direct Knowledge Graph Facts
+                answer = f"⚠️ **Service Note: Multi-Agent Cloud is currently busy.**\n\nI have retrieved the official records from our **Dallas Neo4j Knowledge Graph** for you:\n\n{facts}\n\n*Strategic AI reasoning will resume shortly.*"
+
+        # 4. Save entire transaction back to Neo4j (if we have a result)
+        if answer:
+            memory.add_message("human", user_query)
+            memory.add_message("ai", answer)
         memory.close()
 
         return jsonify({
@@ -1452,8 +1477,15 @@ def chat():
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
-        logger.error(f"[Chat] Error: {e}")
+        logger.error(f"[Chat] Fatal Orchestration Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/favicon.png')
+def serve_favicon():
+    """Route to explicitly serve the dashboard favicon."""
+    import os
+    from flask import send_from_directory
+    return send_from_directory('.', 'favicon.png')
 
 if __name__ == "__main__":
     import argparse
