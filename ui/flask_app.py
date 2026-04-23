@@ -291,7 +291,7 @@ def _generate_features_reasoning(feat_imp: list, domain_context: str = None) -> 
             
             TASK: 
             Provide the response strictly in this format:
-            * **Top Predictors Insight**: [Sentence 1: Explain why these features dominate the {metric_name} calculation]. [Sentence 2: Connect these predictors to the departmental bottlenecks identified in Neo4j].
+            * **Top Predictors Insight**: [Sentence 1: Explain why these features dominate the model's predictions]. [Sentence 2: Connect these predictors to the departmental bottlenecks identified in Neo4j].
 
             Keep the entire response under 55 words. Do not use more than two sentences.
             """
