@@ -1,4 +1,15 @@
-# Data files
+# Personal Workspace (Exclude from GitHub)
+scratch/
+tests/
+
+# Environment / Keys (CRITICAL: DO NOT REMOVE)
+.env
+.env.local
+.venv/
+venv/
+env/
+
+# Data files (Exclude large files, keep structure)
 *.csv
 *.xlsx
 *.parquet
@@ -9,30 +20,11 @@ data/processed/*
 data/reports/*
 !data/reports/.gitkeep
 
-# Environments
-.env
-.venv/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Environment Variables
-.env
-.env.local
-
 # Python artifacts
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Jupyter Notebooks
-.ipynb_checkpoints
+.pytest_cache/
 
 # Logs
 logs/
 *.log
-
-# pytest
-.pytest_cache/

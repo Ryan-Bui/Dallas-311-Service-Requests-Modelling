@@ -23,10 +23,18 @@ The pipeline no longer stops after the first training run if results are poor.
   2. **Data Bias Correction**: AI identifies if the model is underperforming on specific Zip Codes and requests targeted oversampling.
   3. **Auto-Retrain**: The pipeline loops back to Phase 2 with the refined features.
 
-## Phase 4: Domain Synthesis & Knowledge Grounding
-The final model isn't just a set of weights; it is grounded in city policy.
-- **Action**: All statistical results are passed through the **Spanner Knowledge Graph**.
-- **Transformation**: Raw feature importance (e.g., "ERT_days: 0.13") is converted into operational intelligence (e.g., "The model identifies ERT_days as critical; this aligns with the 2024 City Audit finding that delay-tracking is inconsistent").
+## Phase 4: Domain Synthesis & Knowledge Grounding (Neo4j Integration)
+The final model isn't just a set of weights; it is grounded in city policy and operational relationships via a native **Neo4j Knowledge Graph**.
+
+- **Action**: All statistical results and predictions are cross-referenced with the graph schema.
+- **Node Intelligence**:
+  - `Service` nodes linked to `Department` via `OWNED_BY`.
+  - `AuditTopic` and `DocumentChunk` nodes (vectorized) containing RAG context.
+  - `ExternalFactor` nodes showing what impacts specific services (`AFFECTED_BY`).
+- **Transformation**: Raw feature importance (e.g., "ERT_days: 0.13") is joined with graph-traversed insights.
+  - *Example*: "Model identifies `ERT_days` as critical in `Street Repair`. Neo4j shows this `Service` is `AFFECTED_BY` 'Weather Events' and documented in '2024 Audit Topic: Resource Allocation'."
+- **Benefit**: Provides **High-Fidelity Explainability** that goes beyond numbers and into "City Logic."
+
 
 ---
 

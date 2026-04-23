@@ -158,21 +158,7 @@
     }
 
     .ai-reasoning, .card-insight {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      background: rgba(var(--accent-rgb), 0.03);
-      padding: 1.25rem;
-      border-radius: 12px;
-      margin-top: 1rem;
-      line-height: 1.6;
-      display: none;
-      border: 1px solid rgba(var(--accent-rgb), 0.1);
-      border-left: 4px solid var(--accent-color);
-      box-shadow: 
-        inset 0 0 15px rgba(var(--accent-rgb), 0.02),
-        0 4px 20px rgba(0, 0, 0, 0.2),
-        0 0 10px var(--primary-glow);
-      animation: slideDown 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: none !important; /* Force hide for now to ensure a clean UI */
     }
 
     .ai-reasoning strong {
@@ -506,6 +492,103 @@
       from { opacity: 0; transform: translateY(-20px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Expert AI Chat Styles */
+    .chat-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 30px;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      z-index: 999;
+      transition: transform 0.2s;
+      border: 2px solid rgba(var(--accent-rgb), 0.3);
+    }
+
+    .chat-btn:hover { transform: scale(1.1); }
+
+    .chat-panel {
+      position: fixed;
+      bottom: 100px;
+      right: 30px;
+      width: 400px;
+      height: 600px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      display: none;
+      flex-direction: column;
+      z-index: 999;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .chat-header {
+      padding: 20px;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--primary-glow);
+      color: var(--text-primary);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.ai {
+      align-self: flex-start;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-input-area {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
   </style>
 </head>
 
@@ -797,6 +880,99 @@
     </div>
   </div>
 
+  <!-- FLOATING CHAT UI -->
+  <div class="chat-btn" onclick="toggleChat()">💬</div>
+  <div class="chat-panel" id="chat-panel">
+      <div class="chat-header">
+          <div>
+              <div style="font-weight: 700; font-size: 14px;">Expert AI Assistant</div>
+              <div style="font-size: 10px; opacity: 0.8;">Grounded in Neo4j Knowledge Graph</div>
+          </div>
+          <button class="btn" onclick="toggleChat()" style="background:transparent; color:white; padding:0;">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+          <div class="msg ai">Hello! I am your Dallas 311 Expert. I have access to Audit Reports, Web Insights, and our previous conversations. How can I help you today?</div>
+      </div>
+      <div class="chat-input-area">
+          <input type="text" class="chat-input" id="chat-input" placeholder="Ask about model logic or city data..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+          <button class="btn btn-primary" style="padding: 8px 12px;" onclick="sendChatMessage()">➤</button>
+      </div>
+  </div>
+
+  <script>
+    // --- Global State & Configuration ---
+    let _data = null;
+    let _state = {
+      is_running: false,
+      progress: 0,
+      logs: [],
+      agents: {
+        "DataCleanerAgent": "idle",
+        "FeatureEngineeringAgent": "idle",
+        "ModelSelectionAgent": "idle",
+        "RegularizationAgent": "idle",
+        "ExplorerAgent": "idle",
+        "ReinforcementJudge": "idle"
+      }
+    };
+    let _session_id = 'session_' + Math.random().toString(36).substr(2, 9);
+    
+    // --- Chat Logic ---
+    function toggleChat() {
+        const panel = document.getElementById('chat-panel');
+        panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    async function toggleChatWithContext(metricName, value) {
+        const panel = document.getElementById('chat-panel');
+        if (panel.style.display !== 'flex') toggleChat();
+        
+        const input = document.getElementById('chat-input');
+        input.value = `Tell me more about the ${metricName} of ${value} based on Neo4j Graph.`;
+        sendChatMessage();
+    }
+
+    async function sendChatMessage() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if(!text) return;
+
+        const container = document.getElementById('chat-messages');
+        
+        // Append User Message
+        const userMsg = document.createElement('div');
+        userMsg.className = 'msg user';
+        userMsg.innerText = text;
+        container.appendChild(userMsg);
+        input.value = '';
+        container.scrollTop = container.scrollHeight;
+
+        // Append Loading State
+        const loadingMsg = document.createElement('div');
+        loadingMsg.className = 'msg ai';
+        loadingMsg.innerText = 'Analyzing Knowledge Graph...';
+        container.appendChild(loadingMsg);
+
+        try {
+            const resp = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: text,
+                    session_id: _session_id,
+                    department: _data ? _data.best_model_name : null // Pass best model context if available
+                })
+            });
+            const data = await resp.json();
+            
+            // Replace loading with real answer
+            loadingMsg.innerHTML = marked.parse(data.answer);
+            container.scrollTop = container.scrollHeight;
+        } catch (e) {
+            loadingMsg.innerText = 'Error: Could not reach Expert AI.';
+        }
+    }
+  </script>
   <script id="dashboard-bootstrap" type="application/json">null</script>
 
   <script>
@@ -908,14 +1084,11 @@
             <div class="kpi-label">${label}</div>
             <div class="kpi-value">${displayVal}</div>
           </div>
-          <div id="${key}-reasoning" class="ai-reasoning">
-            ${marked.parse(explanation)}
-          </div>
           <div style="font-size: 10px; color: var(--text-muted); margin-top: auto; font-style: italic;">
-            Click to expand details
+            Click to ask Expert AI
           </div>
         `;
-        card.onclick = () => card.classList.toggle('expanded');
+        card.onclick = () => toggleChatWithContext(label, displayVal);
         kpiContainer.appendChild(card);
       });
 

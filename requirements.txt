@@ -21,5 +21,7 @@ google-cloud-spanner
 pypdf
 langchain-text-splitters
 langchain-google-vertexai
+neo4j
+langchain-neo4j
 google-cloud-aiplatform
 langchain-google-genai

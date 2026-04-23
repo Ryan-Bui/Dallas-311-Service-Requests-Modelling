@@ -87,8 +87,30 @@ def run(data_path: str | None = None):
     # Feature importance (Random Forest)
     plot_feature_importance(rf_model, X_train.columns)
 
+    # --- 8. Intelligent Knowledge Enrichment (Phase 2 & 3) ---
+    try:
+        from agents.explorer_agent import ExplorerAgent
+        print("\n--- Phase 2: Explorer Agent (Knowledge Search) ---")
+        explorer = ExplorerAgent()
+        
+        if 'Service Request Type' in df.columns:
+            top_service = df['Service Request Type'].mode()[0]
+            print(f"Investigating knowledge gaps for top service: {top_service}")
+            insight = explorer.run(top_service)
+            
+            print("\n--- Phase 3: Reinforcement Judge (Truth Vetting) ---")
+            from agents.judge_agent import ReinforcementJudge
+            judge = ReinforcementJudge()
+            judgment = judge.run(top_service)
+            print(f"Judgment: {judgment.get('classification')} (Trust Score: {judgment.get('trust_score')})")
+            print(f"Reasoning: {judgment.get('reasoning')[:300]}...")
+    except Exception as e:
+        print(f"Enrichment Error: {e}")
+        print(f"Skipping Explorer Agent enrichment: {e}")
+
     # Hyper-parameter tuning
     tune_random_forest(X_train, y_train, X_test, y_test)
+
 
 
 if __name__ == '__main__':

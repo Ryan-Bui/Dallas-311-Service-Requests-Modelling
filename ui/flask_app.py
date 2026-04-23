@@ -57,7 +57,8 @@ try:
 except ImportError:
     _CORS = None  # optional — not needed for same-origin requests
 
-from inference.explainability_chain import create_explainability_chain, format_coef_summary, get_domain_context
+from inference.explainability_chain import create_explainability_chain, format_coef_summary, get_domain_context, Neo4jChatMemory
+from inference.llm_factory import get_llm
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder=str(UI_DIR))
@@ -103,6 +104,8 @@ _state: dict = {
         "DiagnosticsAgent":    "idle",
         "ModelSelectionAgent": "idle",
         "RegularizationAgent": "idle",
+        "ExplorerAgent":       "idle",
+        "ReinforcementJudge":  "idle",
     },
     "results":     None,
     "error":       None,
@@ -243,16 +246,14 @@ def _generate_metric_reasoning(metric_name: str, value: any, delta: float = 0.0,
             METRIC: {metric_name}
             VALUE: {value}
             
-            GROUNDING DATA (from Spanner Knowledge Graph & City Audit Reports):
+            GROUNDING DATA (from Neo4j Knowledge Graph & City Audit Reports):
             {domain_context if domain_context else "Standard Dallas 311 departmental procedures apply."}
             
             TASK: 
-            Provide the response strictly in the following Markdown format:
-1. **Strategic Insight**: [One sentence core takeaway]
-2. **Operational Context**: [One sentence connecting to Spanner KG/Audit grounding]
-3. **Recommended Action**: [One sentence actionable next step for city officials]
+            Provide the response strictly in this format:
+            * **{metric_name} Analysis**: [Sentence 1: A direct insight about this value]. [Sentence 2: A contextual connection to our Neo4j Knowledge Graph or City Audits].
 
-            Use professional, authoritative language. Keep the entire response under 60 words.
+            Keep the entire response under 50 words. Do not use more than two sentences.
             """
             
             chat_completion = groq_client.chat.completions.create(
@@ -285,16 +286,14 @@ def _generate_features_reasoning(feat_imp: list, domain_context: str = None) -> 
             TOP PREDICTORS (Feature Name & Importance Score):
             {top_features}
             
-            GROUNDING DATA (from Spanner Knowledge Graph & City Audit Reports):
+            GROUNDING DATA (from Neo4j Knowledge Graph & City Audit Reports):
             {domain_context if domain_context else "Standard Dallas 311 departmental procedures apply."}
             
             TASK: 
-            Provide the response strictly in the following Markdown format:
-1. **Strategic Insight**: [One sentence explaining why the #1 predictor is critical to performance]
-2. **Operational Context**: [One sentence connecting these predictors to city departmental workflows (e.g. sanitation, code compliance)]
-3. **Recommended Action**: [One sentence actionable advice for city managers based on these predictors]
+            Provide the response strictly in this format:
+            * **Top Predictors Insight**: [Sentence 1: Explain why these features dominate the {metric_name} calculation]. [Sentence 2: Connect these predictors to the departmental bottlenecks identified in Neo4j].
 
-            Use professional, authoritative language. Keep the entire response under 65 words.
+            Keep the entire response under 55 words. Do not use more than two sentences.
             """
             
             chat_completion = groq_client.chat.completions.create(
@@ -702,7 +701,42 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 f"(ROC-AUC = {reg_result['best_roc_auc']})",
                 "DONE",
             )
+        _set_progress(95)
+
+        # ── 6. Intelligent Enrichment (Phase 2) ───────────────────────────────
+        _log("ExplorerAgent: Searching for real-time city updates …")
+        _set_agent("ExplorerAgent", "running")
+        try:
+            from agents.explorer_agent import ExplorerAgent
+            explorer = ExplorerAgent()
+            
+            # Predict the service that needs enrichment (the most frequent one)
+            service_col = 'Service Request Type'
+            target_service = "Dallas 311"
+            if service_col in df_clean.columns:
+                target_service = df_clean[service_col].mode()[0]
+
+            _log(f"ExplorerAgent: Researching {target_service}...")
+            explorer_res = explorer.run(target_service)
+            _set_agent("ExplorerAgent", "done")
+            _log(f"ExplorerAgent: Research complete and pushed to Neo4j.", "DONE")
+
+            # ── 7. Truth Reconciliation (Phase 3) ─────────────────────────────
+            _log("ReinforcementJudge: Vetting new insights against Audit data …")
+            _set_agent("ReinforcementJudge", "running")
+            from agents.judge_agent import ReinforcementJudge
+            judge = ReinforcementJudge()
+            judgment = judge.run(target_service)
+            _set_agent("ReinforcementJudge", "done")
+            _log(f"ReinforcementJudge: Case {judgment.get('classification')} (Score: {judgment.get('trust_score')})", "DONE")
+        except Exception as e:
+            _set_agent("ExplorerAgent", "error")
+            _set_agent("ReinforcementJudge", "error")
+            _log(f"Intelligent agents skipped or failed: {e}", "WARNING")
+        
+        # --- ALL AGENTS COMPLETE ---
         _set_progress(100)
+
 
         # ── Build results payload ──────────────────────────────────────────────
         # Model comparison rows — normalise column names from DataFrame / list
@@ -1358,6 +1392,68 @@ def upload_csv():
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Real-time RAG Chat endpoint with Neo4j memory."""
+    data = request.json
+    user_query = data.get("message")
+    session_id = data.get("session_id", "default_session")
+    dept = data.get("department") # Optional context
+    
+    if not user_query:
+        return jsonify({"error": "No message provided"}), 400
+
+    try:
+        memory = Neo4jChatMemory(session_id)
+        
+        # 1. Retrieve Hybrid Context (PDFs + Web Insights)
+        facts = get_domain_context(department=dept)
+        
+        # 2. Retrieve Conversation History from Graph
+        history = memory.get_history(limit=5)
+        
+        # 3. Use LLM to generate response
+        llm = get_llm(temperature=0.7)
+        from langchain_core.prompts import ChatPromptTemplate
+        chat_prompt = ChatPromptTemplate.from_template("""
+            You are the DALLAS 311 INTELLIGENCE AGENT & DATA SCIENTIST. 
+            Your goal is to explain BOTH City of Dallas services AND the Machine Learning components of this dashboard (like XGBoost, Confusion Matrices, and Predictions).
+            
+            ROLE SPECIFICATIONS:
+            - PRIORITIZE: If the CITY FACTS contain a section labeled 'GOLDEN HUMAN WISDOM', you MUST use those interpretations as your primary source. This is the team's expert judgment.
+            - If asked about City Data: Use the CITY FACTS provided.
+            - If asked about the ML Model: Explain the concepts (like False Negatives, Precision, Recall) using the team's operational context if available.
+            - Use the CONVERSATION HISTORY to keep the thread alive.
+            
+            CITY FACTS:
+            {facts}
+            
+            CONVERSATION HISTORY:
+            {history}
+            
+            HUMAN: {query}
+            ASSISTANT:
+        """)
+        
+        from langchain_core.output_parsers import StrOutputParser
+        chain = chat_prompt | llm | StrOutputParser()
+        answer = chain.invoke({"facts": facts, "history": history, "query": user_query})
+        
+        # 4. Save entire transaction back to Neo4j
+        memory.add_message("human", user_query)
+        memory.add_message("ai", answer)
+        memory.close()
+
+        return jsonify({
+            "answer": answer,
+            "session_id": session_id,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"[Chat] Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     import argparse
