@@ -1061,8 +1061,10 @@
           if (!el) return;
           if (content && content.trim() !== "") {
               // Now using marked.parse for structured output
-              el.innerHTML = `<strong>${prefix}:</strong><br><div class="markdown-body">${marked.parse(content)}</div>`;
+              el.innerHTML = `<strong>${prefix}:</strong><br><div class="markdown-body">${marked.parse(content)}</div><div style="font-size:10px; opacity:0.5; margin-top:5px;"><em>Click to discuss with AI</em></div>`;
               el.style.display = 'block';
+              el.style.cursor = 'pointer';
+              el.onclick = () => toggleChatWithContext(prefix || 'Report Analysis', 'Expert Inquiry');
           } else {
               el.style.display = 'none';
           }
@@ -1099,8 +1101,10 @@
         if (results.models) {
           results.models.forEach(m => {
             const row = document.createElement('tr');
+            row.style.cursor = 'pointer';
             row.style.fontWeight = m.Model === results.best_model ? '700' : '400';
             row.style.color = m.Model === results.best_model ? 'var(--primary-light)' : 'inherit';
+            row.onclick = () => toggleChatWithContext(`Model Analysis: ${m.Model}`, `AUC: ${m.ROC_AUC.toFixed(3)} | Acc: ${m.Accuracy.toFixed(3)}`);
             row.innerHTML = `
               <td>${m.Model} ${m.Model === results.best_model ? '★' : ''}</td>
               <td>${(m.ROC_AUC || 0).toFixed(3)}</td>
@@ -1128,6 +1132,8 @@
 
           const item = document.createElement('div');
           item.className = 'diag-item';
+          item.style.cursor = 'pointer';
+          item.onclick = () => toggleChatWithContext(`Diagnostic Check: ${c.label}`, passed ? 'PASS' : 'FAIL');
           item.innerHTML = `
             <span class="diag-label">${c.label}</span>
             <span class="diag-status ${passed ? 'diag-pass' : 'diag-fail'}">${passed ? 'PASS' : 'FAIL'}</span>
@@ -1212,7 +1218,10 @@
         draw('rocChart', 'line', firstModel.roc_curve.fpr, Object.entries(det).filter(([n, d]) => d.roc_curve).map(([name, data]) => ({
           label: name, data: data.roc_curve.tpr,
           borderColor: modelColors[name], backgroundColor: modelColorsFade[name], fill: true, tension: 0.3, borderWidth: 2
-        })), { scales: { x: { title: { display: true, text: 'FPR' } }, y: { title: { display: true, text: 'TPR' } } } });
+        })), { 
+          onClick: () => toggleChatWithContext('ROC Curve Analysis', 'Expert Vision'),
+          scales: { x: { title: { display: true, text: 'FPR' } }, y: { title: { display: true, text: 'TPR' } } } 
+        });
       }
 
       // 2. PR CURVES
@@ -1220,7 +1229,10 @@
         draw('prChart', 'line', firstModel.pr_curve.recall, Object.entries(det).map(([name, data]) => ({
           label: name, data: data.pr_curve ? data.pr_curve.precision : [],
           borderColor: modelColors[name], backgroundColor: modelColorsFade[name], fill: true, tension: 0.3, borderWidth: 2
-        })), { scales: { x: { title: { display: true, text: 'Recall' } }, y: { title: { display: true, text: 'Precision' } } } });
+        })), { 
+          onClick: () => toggleChatWithContext('Precision-Recall Analysis', 'Expert Vision'),
+          scales: { x: { title: { display: true, text: 'Recall' } }, y: { title: { display: true, text: 'Precision' } } } 
+        });
       }
 
       // 3. CLASSIFICATION METRICS COMPARISON
@@ -1239,7 +1251,8 @@
         box.style.padding = '12px';
         box.style.borderRadius = 'var(--radius-md)';
         box.style.border = '1px solid var(--border)';
-        box.style.fontSize = '12px';
+        box.style.cursor = 'pointer';
+        box.onclick = () => toggleChatWithContext(`Confusion Matrix: ${name}`, `TP: ${cm[1][1]} | FN: ${cm[1][0]}`);
         box.innerHTML = `
             <div style="font-weight: 700; margin-bottom: 8px; color:${modelColors[name]}">${name}</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -1288,6 +1301,13 @@
         ], { 
           indexAxis: 'y', 
           plugins: { legend: { display: false } },
+          onClick: (evt, elements) => {
+            if (elements.length > 0) {
+              const idx = elements[0].index;
+              const feat = featImp[idx];
+              toggleChatWithContext(`Top Predictor: ${feat.name}`, feat.score.toFixed(4));
+            }
+          },
           scales: {
             x: { beginAtZero: true, title: { display: true, text: 'Contribution Score' } }
           }
