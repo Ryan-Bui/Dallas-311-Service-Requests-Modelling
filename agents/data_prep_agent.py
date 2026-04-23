@@ -101,7 +101,7 @@ class DataPrepAgent(BaseAgent):
     def report(self) -> dict:
         """Return a summary report of the prepared dataset."""
         if self.df_ is None:
-            return {"error": "run() has not been called yet."}
+            return {"error": "run() has not been called yet or data has been cleared."}
 
         df = self.df_
         return {
@@ -112,3 +112,8 @@ class DataPrepAgent(BaseAgent):
             else {},
             "missing_values": df.isnull().sum().to_dict(),
         }
+
+    def clear(self) -> None:
+        """Clear the internal DataFrame to free memory."""
+        self.df_ = None
+        logger.info("[DataPrepAgent] Internal data cleared.")

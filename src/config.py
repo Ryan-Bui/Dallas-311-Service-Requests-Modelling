@@ -19,6 +19,17 @@ MIN_DEPARTMENT_COUNT = 1000
 SAMPLE_FRAC = 1.0
 RANDOM_STATE = 42
 
+# ---- Memory Optimization ----
+MAX_ROWS_TO_LOAD = 100000  # Hard limit to prevent Render crashes
+MEMORY_EFFICIENT_LOADING = True
+CATEGORICAL_DTYPES = {
+    'Department': 'category',
+    'Priority': 'category',
+    'Method Received Description': 'category',
+    'City Council District': 'category',
+    'Service Request Type': 'category'
+}
+
 # Date format used in the raw CSV
 DATE_FORMAT = '%Y %b %d %I:%M:%S %p'
 

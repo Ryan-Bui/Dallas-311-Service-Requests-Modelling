@@ -177,8 +177,16 @@ class ModelSelectionAgent(BaseAgent):
     # ------------------------------------------------------------------
     def report(self) -> dict:
         if self.comparison_df_ is None:
-            return {"error": "run() has not been called yet."}
+            return {"error": "run() has not been called yet or report data cleared."}
         return {
             "best_model":  self.best_model_name_,
             "comparison":  self.comparison_df_.to_dict(orient="records"),
         }
+
+    def clear(self) -> None:
+        """Clear large training and test sets."""
+        self.X_train_ = None
+        self.X_test_ = None
+        self.y_train_ = None
+        self.y_test_ = None
+        logger.info("[ModelSelectionAgent] Training and test sets cleared.")

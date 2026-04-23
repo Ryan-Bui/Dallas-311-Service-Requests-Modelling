@@ -25,6 +25,11 @@ def group_rare_departments(
         min_count = config.MIN_DEPARTMENT_COUNT
 
     if 'Department' in df.columns:
+        # Handle Categorical types: ensure 'Other' is a valid category before assignment
+        if df['Department'].dtype.name == 'category':
+            if 'Other' not in df['Department'].cat.categories:
+                df['Department'] = df['Department'].cat.add_categories(['Other'])
+        
         dept_counts = df['Department'].value_counts()
         common_depts = dept_counts[dept_counts >= min_count].index
         df['Department_grouped'] = df['Department'].where(

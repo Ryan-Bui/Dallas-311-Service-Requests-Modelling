@@ -30,6 +30,12 @@ def handle_service_request_type(
         top_n = config.TOP_SERVICE_REQUEST_TYPES
 
     if 'Service Request Type' in X_train.columns:
+        # Handle Categorical types
+        for df_obj in [X_train, X_test]:
+            if df_obj['Service Request Type'].dtype.name == 'category':
+                if 'Other' not in df_obj['Service Request Type'].cat.categories:
+                    df_obj['Service Request Type'] = df_obj['Service Request Type'].cat.add_categories(['Other'])
+
         top_types = X_train['Service Request Type'].value_counts().nlargest(top_n).index
         
         X_train['Service Request Type'] = X_train['Service Request Type'].where(
@@ -123,11 +129,12 @@ def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame):
         X_test[numeric_cols] = imputer.transform(X_test[numeric_cols])
 
     # 2. Categorical Imputation
-    cat_cols = X_train.select_dtypes(include=['object']).columns.tolist()
+    cat_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
     if cat_cols:
         cat_imputer = SimpleImputer(strategy='most_frequent')
-        X_train[cat_cols] = cat_imputer.fit_transform(X_train[cat_cols])
-        X_test[cat_cols] = cat_imputer.transform(X_test[cat_cols])
+        # We cast to object for imputation stability, then pandas will handle the back-assignment
+        X_train[cat_cols] = cat_imputer.fit_transform(X_train[cat_cols].astype(object))
+        X_test[cat_cols] = cat_imputer.transform(X_test[cat_cols].astype(object))
 
     # 3. Boolean to int
     bool_cols = X_train.select_dtypes(include=['bool']).columns.tolist()

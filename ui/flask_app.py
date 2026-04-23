@@ -25,6 +25,11 @@ import logging
 import os
 import sys
 import threading
+import gc
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from http import HTTPStatus
 from datetime import datetime
 from pathlib import Path
@@ -144,6 +149,9 @@ def _log(msg: str, tag: str = "INFO") -> None:
     entry = {"t": ts, "tag": tag, "msg": msg}
     with _lock:
         _state["logs"].append(entry)
+        # Cap logs to prevent memory leak over time
+        if len(_state["logs"]) > 500:
+            _state["logs"] = _state["logs"][-500:]
     logger.info("[%s] %s", tag, msg)
 
 
@@ -626,6 +634,13 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _set_agent("DataPrepAgent", "done")
         _log(f"DataPrepAgent: Done — shape {df_clean.shape}", "DONE")
         _set_progress(20)
+        
+        # Log memory usage
+        if psutil:
+            mem = psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+            _log(f"Current Memory Usage: {mem:.1f} MB", "DEBUG")
+        else:
+            _log("Memory monitoring unavailable (psutil not installed).", "DEBUG")
 
         # ── 2. Transformation ──────────────────────────────────────────────────
         _log("TransformationAgent: Encoding & splitting …")
@@ -641,6 +656,11 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _set_agent("TransformationAgent", "done")
         _log(f"TransformationAgent: Done — shape {df_transformed.shape}", "DONE")
         _set_progress(40)
+
+        # Release raw data and clean data now that we have transformed data
+        row_count = int(df_clean.shape[0])
+        col_count = int(df_clean.shape[1])
+        dpa.clear()
 
         # ── 3. Diagnostics ─────────────────────────────────────────────────────
         _log("DiagnosticsAgent: Running normality & imbalance checks …")
@@ -668,6 +688,10 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _set_agent("ModelSelectionAgent", "done")
         _log(f"ModelSelectionAgent: Best = {model_result['best_model_name']}", "DONE")
         _set_progress(80)
+
+        # Release transformed data copies inside agent
+        ta.clear()
+        msa.clear()
 
         # ── 5. Regularization ──────────────────────────────────────────────────
         skip_reg = os.getenv("SKIP_REGULARIZATION", "False").lower() == "true"
@@ -720,6 +744,11 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             _set_agent("ExplorerAgent", "done")
             _log(f"ExplorerAgent: Research complete and pushed to Neo4j.", "DONE")
 
+            # Memory Release after last use of df_clean
+            del df_clean
+            gc.collect()
+            _log("Clean data released after enrichment.", "DEBUG")
+
             # ── 7. Truth Reconciliation (Phase 3) ─────────────────────────────
             _log("ReinforcementJudge: Vetting new insights against Audit data …")
             _set_agent("ReinforcementJudge", "running")
@@ -769,6 +798,12 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
 
         # Build top-level 'Metric Objects' with context
         last_case = _build_last_trained_case(df_transformed)
+        
+        # Memory Release after last use of df_transformed
+        del df_transformed
+        gc.collect()
+        _log("Transformed data released before payload build.", "DEBUG")
+        
         dept_name = last_case.get("department") if last_case else "Dallas 311"
         
         try:
@@ -779,13 +814,13 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         metrics = {
             "records": {
                 "label": "Records Processed",
-                "value": int(df_clean.shape[0]),
+                "value": row_count,
                 "delta": 0,
                 "reasoning": "Team Wisdom: Click to see how this affects our sanitation routes."
             },
             "features": {
                 "label": "Features Selected",
-                "value": len(feat_imp) if feat_imp else int(df_clean.shape[1]),
+                "value": len(feat_imp) if feat_imp else col_count,
                 "reasoning": "Team Wisdom: Click to see why these predictors matter to Dallas."
             },
             "accuracy": {

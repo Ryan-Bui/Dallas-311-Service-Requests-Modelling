@@ -106,7 +106,7 @@ class TransformationAgent(BaseAgent):
     def report(self) -> dict:
         """Return a summary of the transformation output."""
         if self.df_ is None:
-            return {"error": "run() has not been called yet."}
+            return {"error": "run() has not been called yet or data has been cleared."}
 
         df = self.df_
         return {
@@ -119,3 +119,8 @@ class TransformationAgent(BaseAgent):
             else {},
             "missing_values": df.isnull().sum().sum(),
         }
+
+    def clear(self) -> None:
+        """Clear the internal DataFrame to free memory."""
+        self.df_ = None
+        logger.info("[TransformationAgent] Internal data cleared.")

@@ -46,3 +46,10 @@ class BaseAgent(ABC):
             Generic dictionary containing performance metrics, shapes, or statuses.
         """
         pass
+
+    def clear(self) -> None:
+        """
+        Optional method to clear large internal data structures to save memory.
+        Subclasses should override this if they store substantial DataFrames/Models.
+        """
+        pass
