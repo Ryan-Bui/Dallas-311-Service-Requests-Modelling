@@ -3,7 +3,7 @@
 # ============================================
 
 # Path to raw data
-DATA_PATH = "data/sample_3100.csv"
+DATA_PATH = "sampleb.csv"
 
 # Columns to drop immediately after loading
 COLUMNS_TO_DROP_INITIAL = [

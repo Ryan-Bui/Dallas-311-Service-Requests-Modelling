@@ -1408,10 +1408,27 @@ def chat():
 
     try:
         memory = Neo4jChatMemory(session_id)
-        
+
         # 1. Retrieve Hybrid Context (PDFs + Web Insights)
         facts = get_domain_context(department=dept, user_query=user_query)
         logger.info(f"[Chat] Fact-Grounding complete. Context size: {len(facts)} chars.")
+        
+        # 1b. Inject Live Dashboard Telemetry (Ground truth for CURRENT numbers)
+        with _lock:
+            live_results = _state.get("results")
+            if not live_results:
+                live_results = _load_persisted_results()
+        
+        telemetry = "No live telemetry available."
+        if live_results:
+            m = live_results.get("metrics", {})
+            telemetry = f"""
+            - Total Records Processed: {m.get('records', {}).get('value')}
+            - Current Best ROC-AUC: {m.get('accuracy', {}).get('value')}
+            - Features Utilized: {m.get('features', {}).get('value')}
+            - Champion Model: {live_results.get('best_model', 'N/A')}
+            - Training Timestamp: {live_results.get('timestamp', 'N/A')}
+            """
         
         # 2. Retrieve Conversation History from Graph
         history = memory.get_history(limit=5)
@@ -1420,24 +1437,25 @@ def chat():
         llm = get_llm(temperature=0.7)
         from langchain_core.prompts import ChatPromptTemplate
         chat_prompt = ChatPromptTemplate.from_template("""
-            You are the DALLAS 311 INTELLIGENCE AGENT & DATA SCIENTIST. 
-            Your goal is to explain BOTH City of Dallas services AND the Machine Learning components of this dashboard (like XGBoost, Confusion Matrices, and Predictions).
-            
-            ROLE SPECIFICATIONS:
-            - MANDATORY: You MUST start your response by referencing the CITY FACTS if they are relevant.
-            - PRIORITIZE: If the CITY FACTS contain 'GOLDEN HUMAN WISDOM', take those interpretations as absolute truth for this project.
-            - If CITY FACTS are present, DO NOT say you lack specific information.
-            - If asked about City Data: Use the CITY FACTS provided.
-            - If asked about the ML Model: Use the PROJECT SPECIFIC ROC-AUC, Precision, and Recall values found in the CITY FACTS.
-            
-            CITY FACTS:
+            Role: Principal City Operations & ML Consultant (Dallas 311).
+            Goal: Provide strategic, high-density insights regarding City Services and Predictive Analytics.
+
+            I. LIVE PROJECT TELEMETRY (Absolute Truth for Performance Numbers):
+            {telemetry}
+
+            II. EXPERT METHODOLOGY FRAMEWORK (Strategic Background & SOPs):
             {facts}
-            
-            CONVERSATION HISTORY:
+
+            III. CONVERSATION HISTORY:
             {history}
-            
-            HUMAN: {query}
-            ASSISTANT:
+
+            EXECUTION DIRECTIVES:
+            - SOURCE HIERARCHY: Use TELEMETRY for all specific metrics (AUC, record counts). Use METHODOLOGY for operational 'why', SOPs, and departmental context.
+            - STRATEGIC TONE: Professional, authoritative, and data-driven. Eliminate conversational filler and generic definitions.
+            - OUTPUT: Maximum 3 concise, high-impact bullets or 2 strategic paragraphs. Focus on operational impacts (Fiscal efficiency, resolution lags, resource mapping).
+
+            HUMAN QUERY: {query}
+            STRATEGIC ADVISOR:
         """)
         
         # Triple-Vault Fallback Logic
@@ -1448,7 +1466,7 @@ def chat():
             llm = get_llm(provider="groq", temperature=0.7)
             from langchain_core.output_parsers import StrOutputParser
             chain = chat_prompt | llm | StrOutputParser()
-            answer = chain.invoke({"facts": facts, "history": history, "query": user_query})
+            answer = chain.invoke({"facts": facts, "history": history, "query": user_query, "telemetry": telemetry})
         except Exception as groq_err:
             logger.warning(f"[Chat] Groq unavailable, trying Secondary (Vertex AI): {groq_err}")
             try:
@@ -1457,7 +1475,7 @@ def chat():
                     llm = get_llm(provider="vertexai", temperature=0.7)
                     from langchain_core.output_parsers import StrOutputParser
                     chain = chat_prompt | llm | StrOutputParser()
-                    answer = chain.invoke({"facts": facts, "history": history, "query": user_query})
+                    answer = chain.invoke({"facts": facts, "history": history, "query": user_query, "telemetry": telemetry})
                 else:
                     raise ValueError("No Google API Key found for Gemini fallback.")
             except Exception as vertex_err:
