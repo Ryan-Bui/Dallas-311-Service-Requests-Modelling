@@ -25,6 +25,13 @@ Transmuting citizen audio into real-time operational predictions. This system pr
   - **Entity**: "High weed violation" -> **Feature**: `Service Request Type` (Code Concern - CCS)
   - **Entity**: "Urgent/Emergency" -> **Feature**: `Priority` (High)
 
+#### Heuristic Fallbacks (Missing Feature Handling)
+To ensure the **"Predictive Handshake"** doesn't fail when transcript entities are ambiguous or missing, Stage B implements:
+1. **Knowledge Graph Imputation**: If `Service Request Type` is identified but `Department` is missing, the system queries Neo4j for the `OWNED_BY` relationship (e.g., *Pothole* -> *Public Works*).
+2. **Global Mode Fallbacks**: Inferred features use the 600k-row training mode (e.g., District 2 is the most frequent caller; defaults to "2" if location is unheard).
+3. **"Unknown" Flagging**: Features that cannot be inferred are passed as `"Unknown"`, which the model is trained to interpret as a "Neutral" predictor.
+4. **LLM Confidence Scoring**: If multiple entities are missing, the NLP layer flags the request as "Medium Confidence," triggering a request for caller clarification.
+
 ### Stage C: The Predictive Handshake (ML Inference)
 
 - **Trigger**: The NLP-extracted features are posted to the `/api/manual_infer` endpoint.

@@ -83,19 +83,33 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
     try:
         driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
         
-        # --- PART 1: Cypher Graph Search (Structured Audit Rules) ---
-        if department:
+        # --- PART 1: Cypher Graph Search (Grounded Audit & Bottleneck Reasoning) ---
+        if department or service_type:
             with driver.session() as session:
-                cypher = """
+                # Query 1: Departmental Audit Topics
+                audit_cypher = """
                 MATCH (d:Department)-[:MONITORED_IN]->(a:AuditTopic)
                 WHERE d.name =~ $dept_regex
                 RETURN d.name AS dept, a.name AS topic, a.objective AS objective
                 """
-                # Use regex for flexible department matching
-                dept_regex = f"(?i).*{department}.*"
-                results = session.run(cypher, dept_regex=dept_regex)
-                for record in results:
-                    context_parts.append(f"- Audit Focus: {record['topic']} (Goal: {record['objective']})")
+                dept_regex = f"(?i).*{department or ''}.*"
+                audit_results = session.run(audit_cypher, dept_regex=dept_regex)
+                for record in audit_results:
+                    context_parts.append(f"- RECENT AUDIT: {record['topic']} (Ref: {record['objective']})")
+
+                # Query 2: District-Specific Bottlenecks (The 'Grounded' part)
+                bottleneck_cypher = """
+                MATCH (b)-[:AFFECTS|IMPACTS]->(d)
+                WHERE (b:Bottleneck OR b:Issue) AND (d:District OR d:Area) AND d.id = $district_id
+                RETURN 
+                    coalesce(b.cause, b.description, b.name) AS cause, 
+                    coalesce(b.severity, b.impact, 'Moderate') AS severity
+                """
+                # Note: We fetch the district from the manual_infer inputs/features
+                dist_id = str(kwargs.get("district", "Unknown"))
+                bottleneck_results = session.run(bottleneck_cypher, district_id=dist_id)
+                for record in bottleneck_results:
+                    context_parts.append(f"- DISTRICT ALERT: {record['cause']} (Severity: {record['severity']})")
 
         # --- PART 2: Vector Search with Neo4j Natively ---
         # Switch to GoogleGenerativeAIEmbeddings (AI Studio) to bypass project ID requirements
@@ -197,27 +211,27 @@ def create_explainability_chain(provider: str = None):
     # Define the prompt template for the model
     prompt = ChatPromptTemplate.from_template("""
     You are the DALLAS 311 STRATEGIC ADVISOR (Opus-Level Reasoner).
-    You don't just report status; you interpret the city's operational rhythm and provide expert-level guidance.
+    Your goal is GROUNDED STRATEGIC ANALYSIS. You link machine learning predictions with city-wide operational truth.
     
     ---
-    SUB-GRAPH CONTEXT (from Knowledge Graph):
+    GROUNDED SUB-GRAPH KNOWLEDGE (From Neo4j Knowledge Graph):
     {domain_context}
     
     ---
-    MODEL RESULT:
-    - Prediction: {prediction}
-    - Key Influencing Features:
+    PREDICTIVE MODEL RESULT:
+    - Current Forecast: {prediction}
+    - Key Technical Influencers (Coefficients):
     {coef_summary}
     ---
     
-    INSTRUCTIONS (The 4th Cycle Standard):
-    1. EXPLAIN the resolution path based on current heuristics.
-    2. IDENTIFY 'invisible' bottlenecks (look at Supplemental Context and External Factors).
-    3. PROVIDE a 'Pro-Tip' that only an expert city official would know to speed up the case.
+    EXPERT REASONING PROTOCOL (Stage 5):
+    1. EXPLAIN the forecast by linking technical coefficients with RECENT AUDITS or DISTRICT ALERTS found in the sub-graph.
+    2. IDENTIFY if this is a 'Systemic Bottleneck' (from Audit data) or a 'Temporal Anomaly'.
+    3. PROVIDE a 'Grounded Pro-Tip': A specific operational recommendation linked directly to the city knowledge retrieved.
     
-    Translate technical coefficients into operational reality. Be nuanced and authoritative.
+    Translate technical coefficients into operational reality. If the graph contains specific audit topics, refer to them by name.
     
-    STRATEGIC ANALYSIS:
+    STRATEGIC ADVISORY:
     """)
     
     # The LCEL Chain: input -> prompt -> model -> string output
@@ -228,6 +242,7 @@ def create_explainability_chain(provider: str = None):
             "domain_context": lambda x: get_domain_context(
                 department=x.get("department"), 
                 service_type=x.get("service_type"),
+                district=x.get("district"),
                 user_query=x.get("query")
             )
         } 

@@ -37,6 +37,8 @@ from dotenv import load_dotenv
 
 # Load environment variables early
 load_dotenv()
+import warnings
+warnings.filterwarnings("ignore")
 import shutil
 import joblib
 from groq import Groq
@@ -501,6 +503,7 @@ def _dashboard_bootstrap_payload() -> dict:
         "data_path": data_path,
         "finished_at": finished_at,
         "results": results,
+        "agents": _state["agents"],
     })
 
 
@@ -524,7 +527,12 @@ def _sample_data_path() -> Path | None:
 
 
 def _existing_default_data_path() -> Path | None:
-    """Prefer a valid configured dataset, otherwise fall back to the local sample."""
+    """Prefer a valid configured dataset, otherwise fall back to the local small sample."""
+    # Priority: 1. Manual selection (handled in route) 2. sample1.csv (small) 3. Configured path
+    small_sample = ROOT / "sample1.csv"
+    if small_sample.exists():
+        return small_sample
+    
     configured_path = _configured_data_path()
     if configured_path and configured_path.exists():
         return configured_path
@@ -618,6 +626,16 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         for k in _state["agents"]:
             _state["agents"][k] = "idle"
 
+    # --- Pipeline Reporting Defaults (Safety Shield) ---
+    row_count, col_count = 0, 0
+    train_size, test_size = 0, 0
+    diag = {"overall_pass": False, "issues": ["Pipeline started"]}
+    model_result = {"best_model_name": "None", "detailed_results": {}}
+    reg_result = {"best_method": "Idle", "best_roc_auc": 0.0}
+    feat_imp = []
+    df_clean = None
+    df_transformed = None
+
     try:
         # ── 1. DataPrep ────────────────────────────────────────────────────────
         _log("Pipeline started — dallas_311_service_requests")
@@ -634,6 +652,13 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _set_agent("DataPrepAgent", "done")
         _log(f"DataPrepAgent: Done — shape {df_clean.shape}", "DONE")
         _set_progress(20)
+        
+        # Capture research topic before any potential clearing
+        service_col = 'Service Request Type'
+        target_service = "Dallas 311"
+        if service_col in df_clean.columns:
+            target_service = str(df_clean[service_col].mode()[0])
+            _log(f"Intelligence Target Identified: {target_service}", "DEBUG")
         
         # Log memory usage
         if psutil:
@@ -657,9 +682,9 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _log(f"TransformationAgent: Done — shape {df_transformed.shape}", "DONE")
         _set_progress(40)
 
-        # Release raw data and clean data now that we have transformed data
         row_count = int(df_clean.shape[0])
         col_count = int(df_clean.shape[1])
+        
         dpa.clear()
 
         # ── 3. Diagnostics ─────────────────────────────────────────────────────
@@ -688,6 +713,10 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         _set_agent("ModelSelectionAgent", "done")
         _log(f"ModelSelectionAgent: Best = {model_result['best_model_name']}", "DONE")
         _set_progress(80)
+
+        # Cache split sizes for reporting before clearing agents
+        train_size = int(msa.X_train_.shape[0]) if hasattr(msa, 'X_train_') and msa.X_train_ is not None else 0
+        test_size  = int(msa.X_test_.shape[0]) if hasattr(msa, 'X_test_') and msa.X_test_ is not None else 0
 
         # Release transformed data copies inside agent
         ta.clear()
@@ -733,11 +762,7 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             from agents.explorer_agent import ExplorerAgent
             explorer = ExplorerAgent()
             
-            # Predict the service that needs enrichment (the most frequent one)
-            service_col = 'Service Request Type'
-            target_service = "Dallas 311"
-            if service_col in df_clean.columns:
-                target_service = df_clean[service_col].mode()[0]
+            _log(f"ExplorerAgent: Researching {target_service}...")
 
             _log(f"ExplorerAgent: Researching {target_service}...")
             explorer_res = explorer.run(target_service)
@@ -825,7 +850,7 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             },
             "accuracy": {
                 "label": "Best ROC-AUC",
-                "value": round(float(reg_result["best_roc_auc"]), 3),
+                "value": round(float(reg_result.get("best_roc_auc", 0.0)), 3),
                 "reasoning": "Team Wisdom: Click to see if this model is city-ready."
             }
         }
@@ -851,8 +876,8 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             "feature_importances": feat_imp,
             "features_reasoning": "Strategic Vetting: Click to see domain-specific predictors.",
             "regularization": {
-                "best_method":  reg_result["best_method"],
-                "best_roc_auc": float(reg_result["best_roc_auc"]),
+                "best_method":  reg_result.get("best_method", "N/A"),
+                "best_roc_auc": float(reg_result.get("best_roc_auc", 0.0)),
                 "all_results":  _make_json_safe(reg_result.get("all_results", {})),
                 "coef_summary": _make_json_safe(reg_result.get("coef_summary")),
             },
@@ -863,8 +888,8 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
             },
             "last_trained_case": last_case,
             "feature_importance": feat_imp,
-            "data_shape":  [int(df_clean.shape[0]), int(df_clean.shape[1])],
-            "train_test":  [int(msa.X_train_.shape[0]), int(msa.X_test_.shape[0])],
+            "data_shape":  [row_count, col_count],
+            "train_test":  [train_size, test_size],
         }
 
         # Expert AI Analysis is now distributed into individual metrics reasoning fields.
@@ -939,7 +964,7 @@ def _run_inference(data_path: str, model_path: Path | None = None, enc_path: Pat
         if 'Created Date' in df_clean.columns:
             _log("Preprocessing and encoding raw data...")
             X, y = split_features_target(df_trans)
-            X, _ = handle_missing_values(X, X)
+            X, _, _ = handle_missing_values(X, X, initial_imputers=encoders.get("imputers"))
             X, _ = handle_service_request_type(X, X)
             X_final, _, _ = encode_categoricals(X, X, initial_encoders=encoders)
             
@@ -989,31 +1014,62 @@ def _preprocess_manual_row(row: dict, encoders: dict) -> pd.DataFrame:
     """Transform a single manual entry dict into a model-ready DataFrame."""
     from src.feature_engineering import add_time_features
     from src.preprocessing import clean_ert, encode_categoricals, handle_service_request_type, handle_missing_values
+    import numpy as np
 
     # 1. Create initial DataFrame
     df = pd.DataFrame([row])
 
-    # 2. Extract time features if Created Date is present
-    if "Created Date" in df.columns:
+    # 2. Schema Alignment (Stage B: Robust Feature Handling)
+    # Ensure all features the model expects are present (even if NaN/None)
+    if "original_features" in encoders:
+        # Fallback for stale artifacts: if numeric_cols missing, try to infer from df or defaults
+        num_cols = encoders.get("numeric_cols", [])
+        if not num_cols:
+            # Heuristic: anything not in cat_cols or config labels is likely numeric
+            from src.config import LABEL_ENCODE_COLUMNS
+            num_cols = [c for c in encoders["original_features"] if c not in encoders.get("cat_cols", []) and c not in LABEL_ENCODE_COLUMNS]
+
+        for col in encoders["original_features"]:
+            if col not in df.columns:
+                # Use np.nan for numeric, None for object/categorical to prevent isnan type errors
+                df[col] = np.nan if col in num_cols else None
+        
+        # Ensure correct column order and DROP any extra columns not in training
+        df = df[encoders["original_features"]]
+
+    # 3. Extract time features if Created Date is present
+    if "Created Date" in df.columns and pd.notnull(df["Created Date"].iloc[0]):
         df["Created Date"] = pd.to_datetime(df["Created Date"])
         df = add_time_features(df)
-        df = df.drop(columns=["Created Date"], errors="ignore")
+    
+    # Always drop Created Date as it's high-cardinality leakage
+    df = df.drop(columns=["Created Date"], errors="ignore")
 
-    # 3. Clean ERT
+    # 4. Clean ERT
     df = clean_ert(df)
 
-    # 4. Handle Service Request Type (top_n logic)
-    # We pass it through handle_service_request_type but we need X_train for fitting usually.
-    # Here we just ensure it aligns with encoders if needed, or we rely on encode_categoricals unknown handling.
+    # 5. Stateful Imputation
+    imputers = encoders.get("imputers", {})
+    # We pass the same DF twice as X_train/X_test for the signature
+    df, _, _ = handle_missing_values(df, df, initial_imputers=imputers)
+
+    # 6. Service Request Type grouping
+    # In manual mode, we just ensure it's matched against encoders during OHE
     
-    # 5. Encoding & Scaling
+    # 7. Encoding & Scaling
     # We use encode_categoricals in inference mode (initial_encoders=encoders)
-    # We need a dummy Y for the function signature
     X_final, _, _ = encode_categoricals(df, df, initial_encoders=encoders)
     
     # Apply Scaling
     if "scaler" in encoders:
         scaler = encoders["scaler"]
+        # Ensure columns match scaler expectations (add missing OHE columns as 0)
+        for col in scaler.feature_names_in_:
+            if col not in X_final.columns:
+                X_final[col] = 0
+        
+        # Reorder to match scaler
+        X_final = X_final[scaler.feature_names_in_]
         X_final = pd.DataFrame(scaler.transform(X_final), columns=X_final.columns, index=X_final.index)
 
     return X_final
@@ -1360,6 +1416,29 @@ def manual_infer():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/acoustic_extraction_v2', methods=['POST'])
+def acoustic_extract():
+    """Stage A: Transcription & Semantic Extraction (V2.0)."""
+    try:
+        from agents.transcription_agent import TranscriptionAgent
+        data = request.json
+        transcript = data.get("transcript", "")
+        
+        if not transcript:
+            return jsonify({"error": "No transcript provided"}), 400
+            
+        agent = TranscriptionAgent()
+        extracted_features = agent.run(transcript)
+        
+        # LOGGING for your terminal
+        print(f"[STAGE A] AI Extraction result: {extracted_features}")
+        
+        return jsonify(extracted_features)
+    except Exception as e:
+        print(f"[STAGE A ERROR] {e}")
+        return jsonify({"debug_error": str(e)}), 500
+
+
 @app.route("/api/reset", methods=["POST"])
 def reset_pipeline():
     """Reset state back to idle (only when not running)."""
@@ -1457,12 +1536,13 @@ def chat():
         telemetry = "No live telemetry available."
         if live_results:
             m = live_results.get("metrics", {})
+            d = live_results.get("diagnostics", {})
             telemetry = f"""
-            - Total Records Processed: {m.get('records', {}).get('value')}
-            - Current Best ROC-AUC: {m.get('accuracy', {}).get('value')}
-            - Features Utilized: {m.get('features', {}).get('value')}
-            - Champion Model: {live_results.get('best_model', 'N/A')}
-            - Training Timestamp: {live_results.get('timestamp', 'N/A')}
+            - DATA VOLUME: {m.get('records', {}).get('value')} total records.
+            - ACCURACY (ROC-AUC): {m.get('accuracy', {}).get('value')}
+            - FEATURES: {m.get('features', {}).get('value')} predictors utilized.
+            - DIAGNOSTICS: Normality={d.get('is_normal')}, Balance={not d.get('is_imbalanced')}
+            - ALGORITHM: {live_results.get('best_model', 'N/A')}
             """
         
         # 2. Retrieve Conversation History from Graph
@@ -1472,22 +1552,22 @@ def chat():
         llm = get_llm(temperature=0.7)
         from langchain_core.prompts import ChatPromptTemplate
         chat_prompt = ChatPromptTemplate.from_template("""
-            Role: Principal City Operations & ML Consultant (Dallas 311).
-            Goal: Provide strategic, high-density insights regarding City Services and Predictive Analytics.
+            Role: Lead Dallas 311 Operational Auditor & Data Strategist.
+            Rule: ALWAYS lead with the dashboard NUMBERS from the TELEMETRY.
 
-            I. LIVE PROJECT TELEMETRY (Absolute Truth for Performance Numbers):
+            I. LIVE PROJECT TELEMETRY:
             {telemetry}
 
-            II. EXPERT METHODOLOGY FRAMEWORK (Strategic Background & SOPs):
+            II. STRATEGIC BACKGROUND:
             {facts}
 
             III. CONVERSATION HISTORY:
             {history}
 
             EXECUTION DIRECTIVES:
-            - SOURCE HIERARCHY: Use TELEMETRY for all specific metrics (AUC, record counts). Use METHODOLOGY for operational 'why', SOPs, and departmental context.
-            - STRATEGIC TONE: Professional, authoritative, and data-driven. Eliminate conversational filler and generic definitions.
-            - OUTPUT: Maximum 3 concise, high-impact bullets or 2 strategic paragraphs. Focus on operational impacts (Fiscal efficiency, resolution lags, resource mapping).
+            - NUMERIC DOMINANCE: Every response MUST reference a specific metric from the TELEMETRY.
+            - OPERATIONAL IMPACT: Explain how these numbers affect resolution lags.
+            - OUTPUT: Maximum 3 concise, high-impact bullets.
 
             HUMAN QUERY: {query}
             STRATEGIC ADVISOR:
@@ -1548,8 +1628,24 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true",      help="Enable Flask debug mode")
     args = parser.parse_args()
 
-    print(f"\n  Dallas 311 ML Dashboard")
-    print(f"  Running at: http://localhost:{args.port}")
     print(f"  Press Ctrl+C to stop.\n")
 
-    app.run(host="0.0.0.0", port=args.port, debug=args.debug, use_reloader=True)
+    import atexit
+    import signal
+
+    def graceful_exit():
+        # Prevent 'could not acquire lock' errors on Windows reloads
+        import sys
+        import gc
+        sys.stdout.flush()
+        sys.stderr.flush()
+        gc.collect() 
+        
+    atexit.register(graceful_exit)
+
+    try:
+        app.run(host="0.0.0.0", port=args.port, debug=args.debug, use_reloader=True)
+    except (SystemExit, KeyboardInterrupt):
+        pass
+    except Exception as e:
+        print(f"[Fatal] Server Error: {e}")

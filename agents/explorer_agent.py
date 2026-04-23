@@ -16,7 +16,7 @@ import uuid
 from typing import List, Dict, Any
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_tavily import TavilySearch
 from .base_agent import BaseAgent
 from inference.llm_factory import get_llm
 
@@ -36,7 +36,7 @@ class ExplorerAgent(BaseAgent):
         
         # Initialize Search Tool
         try:
-            self.search = TavilySearchResults(k=3)
+            self.search = TavilySearch(k=3)
         except Exception as e:
             logger.warning(f"Tavily Search init failed: {e}. Falling back to mock results.")
             self.search = None

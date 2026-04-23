@@ -121,6 +121,8 @@ class TransformationAgent(BaseAgent):
         }
 
     def clear(self) -> None:
-        """Clear the internal DataFrame to free memory."""
+        """Clear the internal DataFrame and trigger GC."""
+        import gc
         self.df_ = None
-        logger.info("[TransformationAgent] Internal data cleared.")
+        gc.collect()
+        logger.info("[TransformationAgent] Internal data cleared (GC triggered).")

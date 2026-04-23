@@ -87,13 +87,19 @@ class ModelSelectionAgent(BaseAgent):
         X_train, X_test, y_train, y_test = split_train_test(X, y)
 
         logger.info("[ModelSelectionAgent] Imputing missing values …")
-        X_train, X_test = handle_missing_values(X_train, X_test)
+        X_train, X_test, imputers = handle_missing_values(X_train, X_test)
 
         logger.info("[ModelSelectionAgent] Handling service request types …")
         X_train, X_test = handle_service_request_type(X_train, X_test)
 
         logger.info("[ModelSelectionAgent] Encoding categoricals …")
         X_train, X_test, encoders = encode_categoricals(X_train, X_test)
+        
+        # Include imputers and original feature list in the encoders payload for manual inference / stage B
+        encoders["imputers"] = imputers
+        encoders["original_features"] = X.columns.tolist()
+        encoders["numeric_cols"] = imputers.get("numeric_cols", [])
+        encoders["cat_cols"] = imputers.get("cat_cols", [])
 
         logger.info("[ModelSelectionAgent] Standardizing features …")
         X_train, X_test, scaler = scale_features(X_train, X_test)
@@ -184,9 +190,11 @@ class ModelSelectionAgent(BaseAgent):
         }
 
     def clear(self) -> None:
-        """Clear large training and test sets."""
+        """Clear large training and test sets and trigger GC."""
+        import gc
         self.X_train_ = None
         self.X_test_ = None
         self.y_train_ = None
         self.y_test_ = None
-        logger.info("[ModelSelectionAgent] Training and test sets cleared.")
+        gc.collect()
+        logger.info("[ModelSelectionAgent] Training and test sets cleared (GC triggered).")

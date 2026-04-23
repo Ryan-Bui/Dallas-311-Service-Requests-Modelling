@@ -74,43 +74,64 @@ def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame, initial_enc
     # 1. Ordinal encoding
     for col in config.LABEL_ENCODE_COLUMNS:
         if col in X_train.columns:
-            # Sanitization for inference: cast to str and fill NaNs to prevent isnan TypeError
-            X_train[col] = X_train[col].astype(str).fillna("Unknown")
-            X_test[col] = X_test[col].astype(str).fillna("Unknown")
+            # Sanitization for inference: handle string-casted NaNs correctly and cast to pure string type
+            # This avoids 'object' arrays that break xp.isnan in some sklearn versions
+            X_train[col] = X_train[col].astype(str).replace(['nan', 'None', 'NaN'], "Unknown")
+            X_test[col] = X_test[col].astype(str).replace(['nan', 'None', 'NaN'], "Unknown")
             
+            vals_train = X_train[col].values.astype(str).reshape(-1, 1)
+            vals_test  = X_test[col].values.astype(str).reshape(-1, 1)
+
             if col in encoders:
                 oe = encoders[col]
-                X_train[col] = oe.transform(X_train[[col]])
-                X_test[col] = oe.transform(X_test[[col]])
+                X_train[col] = oe.transform(vals_train).ravel()
+                X_test[col]  = oe.transform(vals_test).ravel()
             else:
                 oe = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
-                X_train[col] = oe.fit_transform(X_train[[col]])
-                X_test[col] = oe.transform(X_test[[col]])
+                X_train[col] = oe.fit_transform(vals_train).ravel()
+                X_test[col]  = oe.transform(vals_test).ravel()
                 encoders[col] = oe
 
     # 2. One-hot encoding
-    object_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
-    if len(object_cols) > 0:
-        if "ohe" in encoders:
-            ohe = encoders["ohe"]
+    if "ohe" in encoders:
+        ohe = encoders["ohe"]
+        # CRITICAL: Always use the encoder's internal fitted feature names if available to avoid ValueError
+        object_cols = list(ohe.feature_names_in_) if hasattr(ohe, "feature_names_in_") else encoders.get("cat_cols", [])
+        
+        if object_cols:
             feature_names = ohe.get_feature_names_out(object_cols)
             
-            train_encoded = ohe.transform(X_train[object_cols])
+            # Ensure all required OHE columns are present (even if as 'Unknown')
+            for col in object_cols:
+                if col not in X_train.columns: X_train[col] = "Unknown"
+                if col not in X_test.columns: X_test[col] = "Unknown"
+
+            X_train_ohe = X_train[object_cols].astype(str).replace(['nan', 'None', 'NaN'], "Unknown")
+            X_test_ohe = X_test[object_cols].astype(str).replace(['nan', 'None', 'NaN'], "Unknown")
+            
+            train_encoded = ohe.transform(X_train_ohe)
             train_encoded_df = pd.DataFrame(train_encoded, columns=feature_names, index=X_train.index)
             X_train = pd.concat([X_train.drop(columns=object_cols), train_encoded_df], axis=1)
             
-            test_encoded = ohe.transform(X_test[object_cols])
+            test_encoded = ohe.transform(X_test_ohe)
             test_encoded_df = pd.DataFrame(test_encoded, columns=feature_names, index=X_test.index)
             X_test = pd.concat([X_test.drop(columns=object_cols), test_encoded_df], axis=1)
-        else:
+    else:
+        object_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
+        if len(object_cols) > 0:
             ohe = OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore')
-            train_encoded = ohe.fit_transform(X_train[object_cols])
+            # Cast to string before fitting to ensure internal categories_ are string-typed
+            train_encoded = ohe.fit_transform(X_train[object_cols].astype(str))
             feature_names = ohe.get_feature_names_out(object_cols)
             
             train_encoded_df = pd.DataFrame(train_encoded, columns=feature_names, index=X_train.index)
             X_train = pd.concat([X_train.drop(columns=object_cols), train_encoded_df], axis=1)
             
-            test_encoded = ohe.transform(X_test[object_cols])
+            import warnings
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, module='sklearn')
+                test_encoded = ohe.transform(X_test[object_cols].astype(str))
+            
             test_encoded_df = pd.DataFrame(test_encoded, columns=feature_names, index=X_test.index)
             X_test = pd.concat([X_test.drop(columns=object_cols), test_encoded_df], axis=1)
             encoders['ohe'] = ohe
@@ -119,22 +140,43 @@ def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame, initial_enc
     return X_train, X_test, encoders
 
 
-def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame):
+def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame, initial_imputers: dict | None = None):
     """Fill numeric NaNs with median and categorical NaNs with most frequent."""
+    imputers = initial_imputers or {}
+
     # 1. Numeric Imputation
-    numeric_cols = X_train.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    if numeric_cols:
-        imputer = SimpleImputer(strategy='median')
-        X_train[numeric_cols] = imputer.fit_transform(X_train[numeric_cols])
-        X_test[numeric_cols] = imputer.transform(X_test[numeric_cols])
+    if "numeric" in imputers:
+        numeric_cols = imputers.get("numeric_cols", [])
+        if numeric_cols:
+            # Ensure columns exist in X_train (they will because of schema alignment)
+            X_train[numeric_cols] = imputers["numeric"].transform(X_train[numeric_cols])
+            X_test[numeric_cols] = imputers["numeric"].transform(X_test[numeric_cols])
+    else:
+        numeric_cols = X_train.select_dtypes(include=['int64', 'float64']).columns.tolist()
+        if numeric_cols:
+            imputer = SimpleImputer(strategy='median')
+            X_train[numeric_cols] = imputer.fit_transform(X_train[numeric_cols])
+            X_test[numeric_cols] = imputer.transform(X_test[numeric_cols])
+            imputers["numeric"] = imputer
+            imputers["numeric_cols"] = numeric_cols
 
     # 2. Categorical Imputation
-    cat_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
-    if cat_cols:
-        cat_imputer = SimpleImputer(strategy='most_frequent')
-        # We cast to object for imputation stability, then pandas will handle the back-assignment
-        X_train[cat_cols] = cat_imputer.fit_transform(X_train[cat_cols].astype(object))
-        X_test[cat_cols] = cat_imputer.transform(X_test[cat_cols].astype(object))
+    if "categorical" in imputers:
+        cat_cols = imputers.get("cat_cols", [])
+        if cat_cols:
+            # Ensure we don't have mixed types or raw None that break isnan
+            X_train[cat_cols] = X_train[cat_cols].astype(object).fillna("Unknown")
+            X_test[cat_cols] = X_test[cat_cols].astype(object).fillna("Unknown")
+            X_train[cat_cols] = imputers["categorical"].transform(X_train[cat_cols])
+            X_test[cat_cols] = imputers["categorical"].transform(X_test[cat_cols])
+    else:
+        cat_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
+        if cat_cols:
+            cat_imputer = SimpleImputer(strategy='most_frequent')
+            X_train[cat_cols] = cat_imputer.fit_transform(X_train[cat_cols].astype(object))
+            X_test[cat_cols] = cat_imputer.transform(X_test[cat_cols].astype(object))
+            imputers["categorical"] = cat_imputer
+            imputers["cat_cols"] = cat_cols
 
     # 3. Boolean to int
     bool_cols = X_train.select_dtypes(include=['bool']).columns.tolist()
@@ -142,7 +184,7 @@ def handle_missing_values(X_train: pd.DataFrame, X_test: pd.DataFrame):
     X_test[bool_cols] = X_test[bool_cols].astype(int)
 
     print("\nTotal missing values in train after cleaning:", X_train.isnull().sum().sum())
-    return X_train, X_test
+    return X_train, X_test, imputers
 
 
 def split_features_target(df: pd.DataFrame):
@@ -178,8 +220,6 @@ def split_train_test(X, y, test_size=None, random_state=None):
 
 def scale_features(X_train: pd.DataFrame, X_test: pd.DataFrame):
     """Standardize numeric features using StandardScaler, fitted on train."""
-    # Only scale columns that are numeric and NOT encoded (categorical)
-    # Actually, scaling all columns is usually safer for solvers like SAGA
     scaler = StandardScaler()
     
     cols = X_train.columns
