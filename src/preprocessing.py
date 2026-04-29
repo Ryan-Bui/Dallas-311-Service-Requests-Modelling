@@ -79,8 +79,8 @@ def encode_categoricals(X_train: pd.DataFrame, X_test: pd.DataFrame, initial_enc
             X_train[col] = X_train[col].astype(str).replace(['nan', 'None', 'NaN'], "Unknown")
             X_test[col] = X_test[col].astype(str).replace(['nan', 'None', 'NaN'], "Unknown")
             
-            vals_train = X_train[col].values.astype(str).reshape(-1, 1)
-            vals_test  = X_test[col].values.astype(str).reshape(-1, 1)
+            vals_train = X_train[col].to_numpy(dtype=object).reshape(-1, 1)
+            vals_test  = X_test[col].to_numpy(dtype=object).reshape(-1, 1)
 
             if col in encoders:
                 oe = encoders[col]
