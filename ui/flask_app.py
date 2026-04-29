@@ -2012,25 +2012,42 @@ def api_send_report():
     if not live_results:
         return jsonify({"success": False, "error": "No performance data available to email."}), 400
         
-    sender_email = os.getenv("MAIL_DEFAULT_SENDER")
-    app_password = os.getenv("MAIL_APP_PASSWORD")
-    
-    # Fallback to session if env vars are missing or placeholders
-    if not sender_email or sender_email == "your-email@gmail.com":
-        sender_email = session.get('admin_email')
-    if not app_password or app_password == "your-app-password":
-        app_password = session.get('admin_password')
-        
-    if not sender_email or not app_password:
-        return jsonify({"success": False, "error": "Email sender not configured. Please set MAIL_DEFAULT_SENDER and MAIL_APP_PASSWORD in .env."}), 400
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    resend_sender = os.getenv("RESEND_FROM_EMAIL") or os.getenv("MAIL_DEFAULT_SENDER")
+    if resend_api_key in {"", "your_resend_api_key", "re_xxxxxxxxx"}:
+        resend_api_key = None
 
-    from agents.email_agent import send_gmail_report
-    success, error_message = send_gmail_report(
-        sender_email=sender_email,
-        app_password=app_password,
-        recipient_email=recipient,
-        report_data=live_results
-    )
+    if resend_api_key:
+        if not resend_sender:
+            return jsonify({"success": False, "error": "Resend sender not configured. Please set RESEND_FROM_EMAIL in .env."}), 400
+
+        from agents.email_agent import send_resend_report
+        success, error_message = send_resend_report(
+            api_key=resend_api_key,
+            sender_email=resend_sender,
+            recipient_email=recipient,
+            report_data=live_results
+        )
+    else:
+        sender_email = os.getenv("MAIL_DEFAULT_SENDER")
+        app_password = os.getenv("MAIL_APP_PASSWORD")
+
+        # Fallback to session if env vars are missing or placeholders
+        if not sender_email or sender_email == "your-email@gmail.com":
+            sender_email = session.get('admin_email')
+        if not app_password or app_password == "your-app-password":
+            app_password = session.get('admin_password')
+
+        if not sender_email or not app_password:
+            return jsonify({"success": False, "error": "Email sender not configured. Please set RESEND_API_KEY and RESEND_FROM_EMAIL, or configure MAIL_DEFAULT_SENDER and MAIL_APP_PASSWORD for Gmail SMTP."}), 400
+
+        from agents.email_agent import send_gmail_report
+        success, error_message = send_gmail_report(
+            sender_email=sender_email,
+            app_password=app_password,
+            recipient_email=recipient,
+            report_data=live_results
+        )
     
     if success:
         return jsonify({"success": True, "message": f"Report sent securely to {recipient}."})

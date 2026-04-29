@@ -1,5 +1,8 @@
 import smtplib
 import socket
+import json
+import urllib.error
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from html import escape
@@ -9,6 +12,8 @@ logger = logging.getLogger(__name__)
 SMTP_HOST = "smtp.gmail.com"
 SMTP_SSL_PORT = 465
 SMTP_TIMEOUT_SECONDS = 15
+RESEND_EMAILS_URL = "https://api.resend.com/emails"
+RESEND_TIMEOUT_SECONDS = 15
 
 def _extract_metric_value(metrics: dict, key: str):
     value = metrics.get(key, {})
@@ -25,13 +30,7 @@ def _build_executive_summary(best_model, roc_auc, accuracy, records) -> str:
     )
 
 
-def send_gmail_report(sender_email: str, app_password: str, recipient_email: str, report_data: dict) -> tuple[bool, str]:
-    """
-    Connects to Gmail's SMTP server using an App Password and dispatches the ML metrics summary.
-    """
-    logger.info(f"Preparing to send dashboard summary from {sender_email} to {recipient_email}...")
-    
-    # 1. Construct HTML Email Template
+def _build_report_message(report_data: dict) -> tuple[str, str, str]:
     subject = "Dallas 311 ML Pipeline - Executive Report"
     metrics = report_data.get("metrics", {}) or {}
     best_model = report_data.get("best_model", "N/A")
@@ -114,7 +113,7 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
                         </tr>
                     </table>
 
-                    <!-- AI Summary -->
+                    <!-- Summary -->
                     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 24px;">
                         <tr>
                             <td>
@@ -135,6 +134,58 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
     </body>
     </html>
     """
+    return subject, text_content, html_content
+
+
+def send_resend_report(api_key: str, sender_email: str, recipient_email: str, report_data: dict) -> tuple[bool, str]:
+    """
+    Dispatches the ML metrics summary through Resend's HTTPS email API.
+    """
+    logger.info("Preparing to send dashboard summary through Resend to %s...", recipient_email)
+
+    subject, text_content, html_content = _build_report_message(report_data)
+    payload = {
+        "from": sender_email,
+        "to": [recipient_email] if isinstance(recipient_email, str) else list(recipient_email),
+        "subject": subject,
+        "html": html_content,
+        "text": text_content,
+    }
+    body = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        RESEND_EMAILS_URL,
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "Dallas311Dashboard/1.0",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=RESEND_TIMEOUT_SECONDS) as response:
+            response_body = response.read().decode("utf-8")
+        logger.info("Report successfully sent through Resend: %s", response_body)
+        return True, ""
+    except urllib.error.HTTPError as e:
+        response_body = e.read().decode("utf-8", errors="replace")
+        error_message = f"Resend API returned HTTP {e.code}: {response_body}"
+        logger.error("Resend dispatch failure: %s", error_message)
+        return False, error_message
+    except (urllib.error.URLError, socket.timeout, TimeoutError) as e:
+        error_message = f"Could not reach Resend API over HTTPS: {e}"
+        logger.error("Resend dispatch failure: %s", error_message)
+        return False, error_message
+
+
+def send_gmail_report(sender_email: str, app_password: str, recipient_email: str, report_data: dict) -> tuple[bool, str]:
+    """
+    Connects to Gmail's SMTP server using an App Password and dispatches the ML metrics summary.
+    """
+    logger.info(f"Preparing to send dashboard summary from {sender_email} to {recipient_email}...")
+
+    subject, text_content, html_content = _build_report_message(report_data)
 
     msg = MIMEMultipart("alternative")
     msg["From"] = sender_email
