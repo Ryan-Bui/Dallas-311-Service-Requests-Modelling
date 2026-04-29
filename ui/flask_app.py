@@ -252,8 +252,9 @@ def _generate_metric_reasoning(metric_name: str, value: any, delta: float = 0.0,
         try:
             # Construct a prompt that enforces the new 3-section structure
             prompt = f"""
-            System: You are an expert City Operations Consultant specializing in Dallas 311 Service Requests.
-            User: Provide a strategic, structured analysis for the following metric.
+            System: You are a student who just recently studied about Dallas 311 Service Requests for an academic project.
+            User: Provide an intelligent response to a common citizen's query in 100-200 words. AVoid jargon.
+
             
             METRIC: {metric_name}
             VALUE: {value}
@@ -1764,26 +1765,27 @@ def chat():
         llm = get_llm(temperature=0.7)
         from langchain_core.prompts import ChatPromptTemplate
         chat_prompt = ChatPromptTemplate.from_template("""
-            Role: Lead Dallas 311 Operational Auditor & Data Strategist.
-            Rule: ALWAYS lead with the dashboard NUMBERS from the TELEMETRY.
-
-            I. LIVE PROJECT TELEMETRY:
+            System: You are an academic researcher analyzing the Dallas 311 project. 
+            Rule: Speak like a normal human using simple, plain English. ABSOLUTELY AVOID consultant jargon, fluff, and overly complex terminology (e.g., NEVER use words like leverage, methodology, synergy, optimization, strategic alignment, utilize, or pinpoint).
+            
+            PROJECT METRICS:
             {telemetry}
-
-            II. STRATEGIC BACKGROUND:
+            
+            BACKGROUND DATA:
             {facts}
 
-            III. CONVERSATION HISTORY:
-            {history}
-
-            EXECUTION DIRECTIVES:
-            - NUMERIC DOMINANCE: Every response MUST reference a specific metric from the TELEMETRY.
-            - OPERATIONAL IMPACT: Explain how these numbers affect resolution lags.
-            - OUTPUT: Maximum 3 concise, high-impact bullets.
-
+            STRICT RULES:
+            - Be extremely concise. Give your answer in 2 to 3 sentences maximum.
+            - Do not write a long introduction, do not restate the question, and do not repeat yourself. Get straight to the point.
+            - Address the Human's query using the facts above.
+            - If the facts provided seem physically impossible or exaggerated, call it out instead of validating it.
+            - Never invent a relationship between the ML metrics and external background stats if they do not logically connect.
+            - If you cannot find the necessary information in the BACKGROUND DATA or PROJECT METRICS to answer the HUMAN QUERY accurately, output ONLY the exact word "NEED_EXPLORER". Do not say anything else.
+            
             HUMAN QUERY: {query}
-            STRATEGIC ADVISOR:
+            RESPONSE:
         """)
+
         
         # Triple-Vault Fallback Logic
         answer = None
@@ -1809,6 +1811,46 @@ def chat():
                 logger.error(f"[Chat] All AI Providers failed: {vertex_err}")
                 # 3. Final Fallback: Direct Knowledge Graph Facts
                 answer = f"⚠️ **Service Note: Multi-Agent Cloud is currently busy.**\n\nI have retrieved the official records from our **Dallas Neo4j Knowledge Graph** for you:\n\n{facts}\n\n*Strategic AI reasoning will resume shortly.*"
+
+        # ── 3.5 Escape Hatch: LLM requests Explorer Agent ────────────────────
+        if answer and "NEED_EXPLORER" in answer:
+            logger.info("[Chat] LLM requested Explorer Agent. Running deep research...")
+            try:
+                from agents.explorer_agent import ExplorerAgent
+                explorer = ExplorerAgent()
+                target = dept if dept else user_query
+                explorer.run(target)
+                
+                # Fetch refreshed context
+                facts = get_domain_context(department=dept, user_query=user_query)
+                logger.info(f"[Chat] Fact-Grounding refreshed. New context size: {len(facts)} chars.")
+                
+                # Re-prompt without the NEED_EXPLORER escape rule
+                second_prompt = ChatPromptTemplate.from_template("""
+                    System: You are an academic researcher analyzing the Dallas 311 project.
+                    Rule: Speak like a normal human using simple, plain English. ABSOLUTELY AVOID consultant jargon, fluff, and overly complex terminology (e.g., NEVER use words like leverage, methodology, synergy, optimization, strategic alignment, utilize, or pinpoint).
+                    
+                    PROJECT METRICS:
+                    {telemetry}
+                    
+                    BACKGROUND DATA:
+                    {facts}
+                    
+                    STRICT RULES:
+                    - Be extremely concise. Give your answer in 2 to 3 sentences maximum.
+                    - Do not write a long introduction, do not restate the question, and do not repeat yourself. Get straight to the point.
+                    
+                    HUMAN QUERY: {query}
+                    RESPONSE:
+                """)
+                llm = get_llm(provider="groq", temperature=0.7)
+                from langchain_core.output_parsers import StrOutputParser
+                chain = second_prompt | llm | StrOutputParser()
+                answer = chain.invoke({"facts": facts, "history": history, "query": user_query, "telemetry": telemetry})
+            except Exception as exp_err:
+                logger.error(f"[Chat] Explorer Agent invocation failed: {exp_err}")
+
+        # 4. Save entire transaction back to Neo4j (if we have a result)
 
         # 4. Save entire transaction back to Neo4j (if we have a result)
         if answer:

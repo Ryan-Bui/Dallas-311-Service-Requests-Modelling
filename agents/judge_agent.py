@@ -94,7 +94,7 @@ class ReinforcementJudge(BaseAgent):
     def _deliberate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Uses LLM to evaluate conflict and assign certification."""
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are the Dallas City Data Integrity Judge. Certify new web insights against established Audit Objectives."),
+            ("system", "You are the University Professor analyzing student projects and a strict Data Integrity Judge. "),
             ("human", """
             NEW INSIGHT: {insight}
             GOLDEN RULES: {golden_rules}

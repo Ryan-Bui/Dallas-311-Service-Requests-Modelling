@@ -199,7 +199,7 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
                     LIMIT 5
                 )
                 SCORE AS score
-                WHERE node.type = 'Report'
+                WHERE node.type = 'Report' AND score > 0.75
                 RETURN node.content AS content, node.source AS source
                 LIMIT 2
                 """
@@ -252,28 +252,28 @@ def create_explainability_chain(provider: str = None):
     
     # Define the prompt template for the model
     prompt = ChatPromptTemplate.from_template("""
-    You are the DALLAS 311 STRATEGIC ADVISOR (Opus-Level Reasoner).
-    Your goal is GROUNDED STRATEGIC ANALYSIS. You link machine learning predictions with city-wide operational truth.
+    System: You are a student who just recently studied about Dallas 311 Service Requests for an academic project.
+    User: Provide an intelligent response to a common citizen's query in 100-200 words. AVoid jargon.
     
-    ---
-    GROUNDED SUB-GRAPH KNOWLEDGE (From Neo4j Knowledge Graph):
+    ---    
+    CITY KNOWLEDGE (From Database):
     {domain_context}
     
     ---
     PREDICTIVE MODEL RESULT:
     - Current Forecast: {prediction}
-    - Key Technical Influencers (Coefficients):
+    - Key Factors:
     {coef_summary}
     ---
     
-    EXPERT REASONING PROTOCOL (Stage 5):
-    1. EXPLAIN the forecast by linking technical coefficients with RECENT AUDITS or DISTRICT ALERTS found in the sub-graph.
-    2. IDENTIFY if this is a 'Systemic Bottleneck' (from Audit data) or a 'Temporal Anomaly'.
-    3. PROVIDE a 'Grounded Pro-Tip': A specific operational recommendation linked directly to the city knowledge retrieved.
+    INSTRUCTIONS:
+    1. Explain the forecast by linking the key factors to the city knowledge provided.
+    2. State clearly whether this is a recurring issue or a one-time event.
+    3. Provide one practical, direct recommendation for city staff. 
     
-    Translate technical coefficients into operational reality. If the graph contains specific audit topics, refer to them by name.
+    Be concise. Do not use words like 'leverage', 'synergy', 'methodology', or 'strategic alignment'.
     
-    STRATEGIC ADVISORY:
+    RECOMMENDATION:
     """)
     
     # The LCEL Chain: input -> prompt -> model -> string output
