@@ -1,5 +1,6 @@
 # Personal Workspace (Exclude from GitHub)
 scratch/
+"markdowns and scratch/"
 tests/
 
 # Environment / Keys (CRITICAL: DO NOT REMOVE)

@@ -718,9 +718,8 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
         train_size = int(msa.X_train_.shape[0]) if hasattr(msa, 'X_train_') and msa.X_train_ is not None else 0
         test_size  = int(msa.X_test_.shape[0]) if hasattr(msa, 'X_test_') and msa.X_test_ is not None else 0
 
-        # Release transformed data copies inside agent
+        # Release transformed data copies inside agent (keep msa until after regularization)
         ta.clear()
-        msa.clear()
 
         # ── 5. Regularization ──────────────────────────────────────────────────
         skip_reg = os.getenv("SKIP_REGULARIZATION", "False").lower() == "true"
@@ -739,13 +738,12 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 _set_agent("RegularizationAgent", "running")
                 from agents.regularization_agent import RegularizationAgent
                 ra = RegularizationAgent()
-                # Ensure we use the return value from the msa.run (model_result)
                 reg_result = ra.run(
-                    model_result.get('X_train_encoded'), 
-                    model_result.get('y_train'),
-                    model_result.get('X_test_encoded'),
-                    model_result.get('y_test'),
-                    feature_names=model_result.get('feature_names')
+                    msa.X_train_, 
+                    msa.y_train_,
+                    msa.X_test_,
+                    msa.y_test_,
+                    feature_names=msa.feature_names_
                 )
                 _set_agent("RegularizationAgent", "done")
             except Exception as e:
@@ -753,6 +751,8 @@ def _run_pipeline(data_path: str | None = None) -> None:  # noqa: C901
                 _set_agent("RegularizationAgent", "error")
                 reg_result = {"best_method": "Regression Error", "best_roc_auc": 0.0, "all_results": {}, "coef_summary": pd.DataFrame()}
         
+        # Now we can safely release the model selection data matrices
+        msa.clear()
         _set_progress(95)
 
         # ── 6. Intelligent Enrichment (Phase 2) ───────────────────────────────
@@ -1358,210 +1358,241 @@ def infer_from_history():
 
 @app.route("/api/manual_infer", methods=["POST"])
 def manual_infer():
-    """Run model inference on a single manually entered row."""
-    # Check for the 500k model first
-    xgb_path = ARTIFACTS_DIR / "artifacts" / "xgb_model_500k.json"
-    rf_path = ARTIFACTS_DIR / "artifacts" / "random_forest_500k.joblib"
-    lr_path = ARTIFACTS_DIR / "artifacts" / "logistic_regression_500k.joblib"
+    """Run model inference on a single manually entered row across 4 time thresholds."""
+    
+    xgb_fallback_path = ARTIFACTS_DIR / "artifacts" / "xgb_model_500k.json"
     feat_path = ARTIFACTS_DIR / "artifacts" / "feature_names.pkl"
-    imp_path = ARTIFACTS_DIR / "artifacts" / "imputer.pkl"
     enc_path = ARTIFACTS_DIR / "artifacts" / "label_encoders.pkl"
-    scale_path = ARTIFACTS_DIR / "artifacts" / "scaler.pkl"
+    
+    if not feat_path.exists() and not xgb_fallback_path.exists():
+        # Baseline fallback
+        m_path = ARTIFACTS_DIR / "best_model.joblib"
+        e_path = ARTIFACTS_DIR / "encoders.joblib"
 
-    if xgb_path.exists():
-        import xgboost as xgb
-        import joblib
-        import pandas as pd
-        import numpy as np
+        if not m_path.exists() or not e_path.exists():
+            return jsonify({"error": "Model artifacts not found. Run pipeline first."}), 400
 
         try:
             row = request.get_json()
             if not row:
                 return jsonify({"error": "No data provided"}), 400
 
-            # 1. Load preprocessors
-            feature_names = joblib.load(feat_path)
-            imputer = joblib.load(imp_path)
-            label_encoders = joblib.load(enc_path)
-            scaler = joblib.load(scale_path)
+            import joblib
+            model = joblib.load(m_path)
+            encoders = joblib.load(e_path)
+            X_final = _preprocess_manual_row(row, encoders)
 
-            model = xgb.XGBClassifier()
-            model.load_model(str(xgb_path))
-
-            # 2. Preprocess row
-            df = pd.DataFrame([row])
-
-            # Extract time features
-            if "Created Date" in df.columns and pd.notnull(df["Created Date"].iloc[0]):
-                df["Created Date"] = pd.to_datetime(df["Created Date"])
-                df["hour"] = df["Created Date"].dt.hour
-                df["day_of_week"] = df["Created Date"].dt.dayofweek
-                df["month"] = df["Created Date"].dt.month
-            else:
-                now = pd.Timestamp.now()
-                df["hour"] = now.hour
-                df["day_of_week"] = now.dayofweek
-                df["month"] = now.month
-
-            # ERT cleaning
-            if 'Estimated Response Time Description' in df.columns and pd.notnull(df['Estimated Response Time Description'].iloc[0]):
-                df['ERT_days'] = pd.to_numeric(df['Estimated Response Time Description'].str.extract(r'(\d+)')[0], errors='coerce')
-            else:
-                df['ERT_days'] = np.nan
-
-            # Cast categoricals to string to allow missing categories
-            for col in ['Service Request Type', 'Priority', 'Method Received Description', 'Department']:
-                if col in df.columns:
-                    df[col] = df[col].astype(str)
-
-            # Apply Label Encoders
-            for col, le in label_encoders.items():
-                if col == 'Department_grouped' and 'Department' in df.columns:
-                    val = df['Department'].iloc[0]
-                    if val in le.classes_:
-                        df[col] = le.transform([val])[0]
-                    else:
-                        df[col] = le.transform(['Other'])[0] if 'Other' in le.classes_ else 0
-                elif col in df.columns:
-                    val = df[col].iloc[0]
-                    if val in le.classes_:
-                        df[col] = le.transform([val])[0]
-                    else:
-                        df[col] = 0
-
-            # Reconstruct columns exactly as feature_names
-            X_final = pd.DataFrame(0, index=[0], columns=feature_names)
-
-            # Copy numeric / label encoded features
-            for col in df.columns:
-                if col in feature_names:
-                    X_final[col] = df[col].iloc[0]
-
-            # Copy One-Hot Encoded features
-            for col in df.select_dtypes(include=['object', 'category']).columns:
-                val = df[col].iloc[0]
-                ohe_col = f"{col}_{val}"
-                if ohe_col in feature_names:
-                    X_final[ohe_col] = 1
-
-            # 3. Impute & Scale
-            X_final = pd.DataFrame(imputer.transform(X_final), columns=feature_names)
-            X_final = pd.DataFrame(scaler.transform(X_final), columns=feature_names)
-
-            # 4. Predict (Ensemble)
-            preds = {}
+            prediction_prob = float(model.predict_proba(X_final)[0][1])
+            prediction_class = int(model.predict(X_final)[0])
             
-            # XGBoost
-            xgb_prob = float(model.predict_proba(X_final)[0][1])
-            xgb_class = int(model.predict(X_final)[0])
-            preds["XGBoost"] = {"class": xgb_class, "probability": xgb_prob}
-            
-            total_prob = xgb_prob
-            model_count = 1
-            
-            # Random Forest
-            if rf_path.exists():
-                rf_model = joblib.load(str(rf_path))
-                rf_prob = float(rf_model.predict_proba(X_final)[0][1])
-                rf_class = int(rf_model.predict(X_final)[0])
-                preds["Random Forest"] = {"class": rf_class, "probability": rf_prob}
-                total_prob += rf_prob
-                model_count += 1
-                
-            # Logistic Regression
-            if lr_path.exists():
-                lr_model = joblib.load(str(lr_path))
-                if hasattr(lr_model, "predict_proba"):
-                    lr_prob = float(lr_model.predict_proba(X_final)[0][1])
-                else:
-                    lr_prob = float(lr_model.predict(X_final)[0])
-                lr_class = int(lr_model.predict(X_final)[0])
-                preds["Logistic Regression"] = {"class": lr_class, "probability": lr_prob}
-                total_prob += lr_prob
-                model_count += 1
-
-            ensemble_prob = total_prob / model_count
-            ensemble_class = 1 if ensemble_prob >= 0.5 else 0
-
-            # 5. Explain
-            coef_summary = ""
-            if hasattr(model, 'feature_importances_'):
-                imps = model.feature_importances_
-                top_idx = np.argsort(imps)[-5:][::-1]
-                coef_summary = "\n".join([f"- {feature_names[i]}: {imps[i]:.4f} (Importance)" for i in top_idx])
-
             chain = create_explainability_chain()
             explanation = chain.invoke({
-                "prediction": f"{'Fast' if ensemble_class == 1 else 'Slow'} Close (Ensemble Probability: {ensemble_prob:.2%})",
-                "coef_summary": coef_summary,
+                "prediction": f"{'Fast' if prediction_class == 1 else 'Slow'} Close (Probability: {prediction_prob:.2%})",
+                "coef_summary": "Legacy 500k Model used.",
                 "department": row.get("Department"),
                 "district": row.get("City Council District")
             })
 
             return jsonify({
-                "prediction": ensemble_class,
-                "probability": ensemble_prob,
-                "predictions": preds,
+                "prediction": prediction_class,
+                "probability": prediction_prob,
+                "predictions": {"Baseline": {"class": prediction_class, "probability": prediction_prob}},
                 "explanation": explanation,
                 "row": row
             })
 
         except Exception as e:
-            logger.exception("Manual inference with 500k XGBoost failed")
-            return jsonify({"error": f"500k model error: {str(e)}"}), 500
+            logger.exception("Baseline manual inference failed")
+            return jsonify({"error": str(e)}), 500
 
-    # Baseline fallback
-    m_path = ARTIFACTS_DIR / "best_model.joblib"
-    e_path = ARTIFACTS_DIR / "encoders.joblib"
 
-    if not m_path.exists() or not e_path.exists():
-        return jsonify({"error": "Model artifacts not found. Run pipeline first."}), 400
+    import xgboost as xgb
+    import joblib
+    import pandas as pd
+    import numpy as np
 
     try:
         row = request.get_json()
         if not row:
             return jsonify({"error": "No data provided"}), 400
 
-        model = joblib.load(m_path)
-        encoders = joblib.load(e_path)
-        X_final = _preprocess_manual_row(row, encoders)
-
-        prediction_prob = model.predict_proba(X_final)[0][1]
-        prediction_class = int(model.predict(X_final)[0])
+        # 1. Load Preprocessors (Global)
+        feature_names = joblib.load(feat_path) if feat_path.exists() else []
         
-        coef_summary = ""
-        if hasattr(model, 'coef_'):
-            import pandas as pd
-            df_coef = pd.DataFrame({
-                'Feature': X_final.columns,
-                'Coefficient': model.coef_[0]
-            })
-            coef_summary = format_coef_summary(df_coef)
-        elif hasattr(model, 'feature_importances_'):
-            imps = model.feature_importances_
-            top_idx = np.argsort(imps)[-5:][::-1]
-            coef_summary = "\n".join([f"- {X_final.columns[i]}: {imps[i]:.4f} (Importance)" for i in top_idx])
+        if enc_path.exists():
+            label_encoders = joblib.load(enc_path)
+        else:
+            e_path = ARTIFACTS_DIR / "encoders.joblib"
+            raw_enc = joblib.load(e_path)
+            label_encoders = {k: v for k, v in raw_enc.items() if hasattr(v, 'classes_')}
 
+        # 2. Preprocess row
+        df = pd.DataFrame([row])
+
+        if "Created Date" in df.columns and pd.notnull(df["Created Date"].iloc[0]):
+            df["Created Date"] = pd.to_datetime(df["Created Date"])
+            df["hour"] = df["Created Date"].dt.hour
+            df["day_of_week"] = df["Created Date"].dt.dayofweek
+            df["month"] = df["Created Date"].dt.month
+        else:
+            now = pd.Timestamp.now()
+            df["hour"] = now.hour
+            df["day_of_week"] = now.dayofweek
+            df["month"] = now.month
+
+        if 'Estimated Response Time Description' in df.columns and pd.notnull(df['Estimated Response Time Description'].iloc[0]):
+            df['ERT_days'] = pd.to_numeric(df['Estimated Response Time Description'].str.extract(r'(\d+)')[0], errors='coerce')
+        else:
+            df['ERT_days'] = np.nan
+
+        for col in ['Service Request Type', 'Priority', 'Method Received Description', 'Department']:
+            if col in df.columns:
+                df[col] = df[col].astype(str)
+
+        for col, le in label_encoders.items():
+            if col == 'Department_grouped' and 'Department' in df.columns:
+                val = df['Department'].iloc[0]
+                if val in le.classes_:
+                    df[col] = le.transform([val])[0]
+                else:
+                    df[col] = le.transform(['Other'])[0] if 'Other' in le.classes_ else 0
+            elif col in df.columns:
+                val = df[col].iloc[0]
+                if val in le.classes_:
+                    df[col] = le.transform([val])[0]
+                else:
+                    df[col] = 0
+
+        # 3. Multi-Threshold Inference
+        thresholds = [24, 48, 72, 96]
+        threshold_predictions = {}
+        
+        # If no specific threshold models exist, fallback to 500k singular
+        has_multi = (ARTIFACTS_DIR / "artifacts" / "xgb_model_72h.json").exists()
+        target_thresholds = thresholds if has_multi else ["500k"]
+
+        coef_summary = ""
+        overall_prob = 0.0
+        overall_class = 0
+
+        for hr in target_thresholds:
+            # Reconstruct raw features
+            if len(feature_names) > 0:
+                X_raw = pd.DataFrame(0, index=[0], columns=feature_names)
+                for col in df.columns:
+                    if col in feature_names:
+                        X_raw[col] = df[col].iloc[0]
+                for col in df.select_dtypes(include=['object', 'category']).columns:
+                    val = df[col].iloc[0]
+                    ohe_col = f"{col}_{val}"
+                    if ohe_col in feature_names:
+                        X_raw[ohe_col] = 1
+            else:
+                X_raw = df.copy()
+
+            # Load specific scalers
+            imp_path = ARTIFACTS_DIR / "artifacts" / f"imputer_{hr}h.pkl"
+            scale_path = ARTIFACTS_DIR / "artifacts" / f"scaler_{hr}h.pkl"
+            if not imp_path.exists(): imp_path = ARTIFACTS_DIR / "artifacts" / "imputer.pkl"
+            if not scale_path.exists(): scale_path = ARTIFACTS_DIR / "artifacts" / "scaler.pkl"
+
+            if imp_path.exists() and scale_path.exists():
+                imputer = joblib.load(imp_path)
+                scaler = joblib.load(scale_path)
+                
+                # Coerce any remaining unencoded strings (like missing label encoders) to NaN
+                # so the imputer can safely fill them with the median.
+                for col in X_raw.columns:
+                    if X_raw[col].dtype == object:
+                        X_raw[col] = pd.to_numeric(X_raw[col], errors='coerce')
+                        
+                X_final = pd.DataFrame(imputer.transform(X_raw), columns=feature_names)
+                X_final = pd.DataFrame(scaler.transform(X_final), columns=feature_names)
+            else:
+                X_final = X_raw
+
+            xgb_path = ARTIFACTS_DIR / "artifacts" / f"xgb_model_{hr}h.json"
+            rf_path = ARTIFACTS_DIR / "artifacts" / f"random_forest_{hr}h.joblib"
+            lr_path = ARTIFACTS_DIR / "artifacts" / f"logistic_regression_{hr}h.joblib"
+
+            if not xgb_path.exists() and hr != "500k":
+                xgb_path = ARTIFACTS_DIR / "artifacts" / f"xgb_model_{hr}.json" # fallback naming
+
+            if not xgb_path.exists():
+                continue
+
+            model = xgb.XGBClassifier()
+            model.load_model(str(xgb_path))
+
+            preds = {}
+            xgb_prob = float(model.predict_proba(X_final)[0][1])
+            xgb_class = int(model.predict(X_final)[0])
+            preds["XGBoost"] = {"class": xgb_class, "probability": xgb_prob}
+
+            total_prob = xgb_prob
+            model_count = 1
+
+            if rf_path.exists():
+                try:
+                    rf_model = joblib.load(str(rf_path))
+                    rf_prob = float(rf_model.predict_proba(X_final)[0][1])
+                    preds["Random Forest"] = {"class": int(rf_model.predict(X_final)[0]), "probability": rf_prob}
+                    total_prob += rf_prob
+                    model_count += 1
+                except Exception as e:
+                    logger.warning(f"RF {hr}h missing: {e}")
+
+            if lr_path.exists():
+                try:
+                    lr_model = joblib.load(str(lr_path))
+                    if hasattr(lr_model, "predict_proba"):
+                        lr_prob = float(lr_model.predict_proba(X_final)[0][1])
+                    else:
+                        lr_prob = float(lr_model.predict(X_final)[0])
+                    preds["Logistic Regression"] = {"class": int(lr_model.predict(X_final)[0]), "probability": lr_prob}
+                    total_prob += lr_prob
+                    model_count += 1
+                except Exception as e:
+                    logger.warning(f"LR {hr}h missing: {e}")
+
+            ensemble_prob = total_prob / model_count
+            threshold_predictions[f"{hr}h" if hr != "500k" else "500k"] = {
+                "ensemble_probability": ensemble_prob,
+                "models": preds
+            }
+            
+            if hr == 72 or hr == "500k":
+                overall_prob = ensemble_prob
+                overall_class = 1 if ensemble_prob >= 0.5 else 0
+                if hasattr(model, 'feature_importances_') and len(feature_names) > 0:
+                    imps = model.feature_importances_
+                    top_idx = np.argsort(imps)[-5:][::-1]
+                    coef_summary = "\n".join([f"- {feature_names[i]}: {imps[i]:.4f} (Importance)" for i in top_idx])
+
+        # 4. Explain
         chain = create_explainability_chain()
+        
+        timeline_str = "\n".join([f"{k}: {v['ensemble_probability']:.2%} probability of resolution" for k, v in threshold_predictions.items()])
+        
         explanation = chain.invoke({
-            "prediction": f"{'Fast' if prediction_class == 1 else 'Slow'} Close (Probability: {prediction_prob:.2%})",
+            "prediction": f"Multi-Threshold Resolution Prediction:\n{timeline_str}",
             "coef_summary": coef_summary,
             "department": row.get("Department"),
             "district": row.get("City Council District")
         })
 
         return jsonify({
-            "prediction": prediction_class,
-            "probability": float(prediction_prob),
+            "prediction": overall_class,
+            "probability": overall_prob,
+            "predictions": threshold_predictions.get("500k", {}).get("models", {}), # legacy support
+            "threshold_predictions": threshold_predictions,
             "explanation": explanation,
             "row": row
         })
 
     except Exception as e:
-        logger.exception("Manual inference fallback failed")
-        return jsonify({"error": str(e)}), 500
-
-
+        logger.exception("Manual inference with multi-threshold models failed")
+        return jsonify({"error": f"Model error: {str(e)}"}), 500
 @app.route('/api/acoustic_extraction_v2', methods=['POST'])
 def acoustic_extract():
     """Stage A: Transcription & Semantic Extraction (V2.0)."""

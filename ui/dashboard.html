@@ -35,9 +35,9 @@
       --color-lr: #f03737;
 
       /* Expert Intelligence & Accent Tokens */
-      --accent-color: #e6baac;
-      --accent-glow: rgba(230, 186, 172, 0.4);
-      --primary-glow: rgba(230, 186, 172, 0.12);
+      --accent-color: #0d9488;
+      --accent-glow: rgba(13, 148, 136, 0.4);
+      --primary-glow: rgba(13, 148, 136, 0.12);
       
       --glass-bg: rgba(255, 255, 255, 0.03);
       --glass-border: rgba(255, 255, 255, 0.08);
@@ -57,6 +57,9 @@
       --text-muted: #64748b;
       --color-admin: var(--text-primary);
       --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.05);
+      --accent-color: #0f766e;
+      --accent-glow: rgba(15, 118, 110, 0.4);
+      --primary-glow: rgba(15, 118, 110, 0.12);
     }
 
     [data-theme="dark"] {
@@ -72,6 +75,9 @@
       --text-muted: #9ca3af;
       --color-admin: #ffffff;
       --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+      --accent-color: #2dd4bf;
+      --accent-glow: rgba(45, 212, 191, 0.4);
+      --primary-glow: rgba(45, 212, 191, 0.12);
     }
 }
 
@@ -975,7 +981,7 @@
           <p class="text-secondary">Simulate real-time citizen call transcriptions for predictive analysis.</p>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 400px; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 24px;">
           <div class="data-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
               <h3 style="margin: 0;">Transcript Input (Simulated Call)</h3>
@@ -1763,53 +1769,46 @@
             }
 
             resultDiv.style.display = 'block';
-            const prob = data.probability;
-            let clarityMsg = "";
-            let strategicMeaning = "";
+            let timelineHtml = '<div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">';
             
-            if (prob >= 0.85) {
-                resultDiv.style.border = '1px solid #10B981';
-                resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
-                predVal.style.color = '#10B981';
-                predVal.innerText = `Prediction: FAST CLOSE (${(prob * 100).toFixed(1)}%)`;
-                clarityMsg = "Your request matches our 'Optimal Path' profile. Estimated resolution within 72 hours.";
-                strategicMeaning = "High resolution success probability.";
-            } else if (prob >= 0.50) {
-                resultDiv.style.border = '1px solid #3B82F6';
-                resultDiv.style.background = 'rgba(59, 130, 246, 0.1)';
+            if (data.threshold_predictions) {
                 predVal.style.color = '#3B82F6';
-                predVal.innerText = `Prediction: STANDARD (${(prob * 100).toFixed(1)}%)`;
-                clarityMsg = "System indicates standard processing. Expected completion conforms to standard city ERT.";
-                strategicMeaning = "Predictable, non-outlier case.";
-            } else {
-                resultDiv.style.border = '1px solid #EF4444';
-                resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-                predVal.style.color = '#EF4444';
-                predVal.innerText = `Prediction: SLOW CLOSE (${((1 - prob) * 100).toFixed(1)}% delay risk)`;
-                clarityMsg = "Due to current volume trends, this case may require additional oversight.";
-                strategicMeaning = "Flagged as a potential 'Slow-Close' outlier.";
-            }
-            
-            let modelsHtml = "";
-            if (data.predictions) {
-                modelsHtml = '<div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">';
-                for (const [modelName, modelData] of Object.entries(data.predictions)) {
-                    modelsHtml += `
-                        <div style="flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-                            <div style="font-size: 10px; opacity: 0.7; margin-bottom: 4px;">${modelName}</div>
-                            <div style="font-size: 14px; font-weight: bold; color: ${modelData.probability >= 0.5 ? '#10B981' : '#EF4444'}">${(modelData.probability * 100).toFixed(1)}%</div>
+                predVal.innerText = 'Multi-Threshold Resolution Prediction';
+                resultDiv.style.border = '1px solid #3B82F6';
+                resultDiv.style.background = 'rgba(59, 130, 246, 0.05)';
+                
+                for (const [hr, hrData] of Object.entries(data.threshold_predictions)) {
+                    const prob = hrData.ensemble_probability;
+                    const color = prob >= 0.5 ? '#10B981' : '#EF4444';
+                    
+                    let modelsHtml = '<div style="display: flex; gap: 4px; margin-top: 4px;">';
+                    for (const [mName, mData] of Object.entries(hrData.models)) {
+                        modelsHtml += `<div style="font-size: 9px; opacity:0.7; border: 1px solid rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 3px;">${mName}: ${(mData.probability*100).toFixed(0)}%</div>`;
+                    }
+                    modelsHtml += '</div>';
+
+                    timelineHtml += `
+                        <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; border-left: 3px solid ${color};">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="font-size: 12px;">Within ${hr.toUpperCase()}</strong>
+                                <span style="color: ${color}; font-weight: bold; font-size: 13px;">${(prob*100).toFixed(1)}%</span>
+                            </div>
+                            ${modelsHtml}
                         </div>
                     `;
                 }
-                modelsHtml += '</div>';
             }
-
+            timelineHtml += '</div>';
+            
             reasonDiv.innerHTML = `
-                <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">"${clarityMsg}"</div>
-                <div style="font-size: 11px; opacity: 0.8; margin-bottom: 12px; font-style: italic;">Strategic Context: ${strategicMeaning}</div>
-                ${modelsHtml}
-                <hr style="border:0; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;">
-                <strong>Expert AI Insight:</strong><br>${marked.parse(data.explanation || "No explanation generated.")}
+                <div style="font-size: 11px; opacity: 0.8; margin-bottom: 8px; font-style: italic;">Strategic Context: Aggregated multi-model prediction</div>
+                ${timelineHtml}
+                <div style="margin-top: 24px; padding: 20px; background: var(--bg-surface); border-top: 3px solid var(--accent-color); border-radius: 8px; box-shadow: var(--shadow-lg);">
+                    <div style="font-size: 14px; font-weight: 800; color: var(--accent-color); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Expert Analysis</div>
+                    <div style="font-size: 13.5px; line-height: 1.6; font-style: normal; color: var(--text-primary);">
+                        ${marked.parse(data.explanation || "No explanation generated.")}
+                    </div>
+                </div>
             `;
             
         } catch (err) {
@@ -2000,12 +1999,12 @@
                 const getVal = (key) => features[key] || features[key.toLowerCase().replace(/ /g, '_')] || 'N/A';
                 
                 entityDiv.innerHTML = `
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <div><strong>Service:</strong> ${getVal("Service Request Type")}</div>
-                        <div><strong>Dept:</strong> ${getVal("Department")}</div>
-                        <div><strong>District:</strong> ${getVal("City Council District")}</div>
-                        <div><strong>Priority:</strong> ${getVal("Priority")}</div>
-                        <div><strong>Method:</strong> ${getVal("Method Received Description")}</div>
+                    <div style="display:flex; flex-wrap:wrap; gap: 12px;">
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; border-left: 3px solid var(--primary-light); min-width: 150px; flex: 1;"><div style="font-size: 10px; opacity: 0.7; text-transform: uppercase; margin-bottom: 4px;">Service</div><div style="font-size: 13px; font-weight: bold; color: var(--text-primary);">${getVal("Service Request Type")}</div></div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; border-left: 3px solid var(--primary-light); min-width: 150px; flex: 1;"><div style="font-size: 10px; opacity: 0.7; text-transform: uppercase; margin-bottom: 4px;">Dept</div><div style="font-size: 13px; font-weight: bold; color: var(--text-primary);">${getVal("Department")}</div></div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; border-left: 3px solid var(--primary-light); min-width: 150px; flex: 1;"><div style="font-size: 10px; opacity: 0.7; text-transform: uppercase; margin-bottom: 4px;">District</div><div style="font-size: 13px; font-weight: bold; color: var(--text-primary);">${getVal("City Council District")}</div></div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; border-left: 3px solid var(--primary-light); min-width: 150px; flex: 1;"><div style="font-size: 10px; opacity: 0.7; text-transform: uppercase; margin-bottom: 4px;">Priority</div><div style="font-size: 13px; font-weight: bold; color: var(--text-primary);">${getVal("Priority")}</div></div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px 14px; border-radius: 6px; border-left: 3px solid var(--primary-light); min-width: 150px; flex: 1;"><div style="font-size: 10px; opacity: 0.7; text-transform: uppercase; margin-bottom: 4px;">Method</div><div style="font-size: 13px; font-weight: bold; color: var(--text-primary);">${getVal("Method Received Description")}</div></div>
                     </div>
                 `;
             }
@@ -2030,46 +2029,47 @@
                 return;
             }
 
-            // Stage 3/C: Clarity Interface Feedback
-            let clarity = "";
-            const prob = pred.probability;
+            // Stage 3/C: Multi-Threshold UI
             const explanation = pred.explanation || "No expert analysis available.";
-            
-            if (prob >= 0.85) {
-                predContainer.style.background = 'rgba(16, 185, 129, 0.1)';
-                predContainer.style.border = '1px solid #10B981';
-                predMsg.style.color = '#10B981';
-                predMsg.innerText = `Probability: HIGH (${(prob*100).toFixed(1)}%)`;
-                clarity = "Your request matches our 'Optimal Path' profile. Estimated resolution within 72 hours.";
-            } else if (prob >= 0.50) {
-                predContainer.style.background = 'rgba(59, 130, 246, 0.1)';
-                predContainer.style.border = '1px solid #3B82F6';
-                predMsg.style.color = '#3B82F6';
-                predMsg.innerText = `Probability: STANDARD (${(prob*100).toFixed(1)}%)`;
-                clarity = "System indicates standard processing. Expected completion conforms to standard city ERT.";
-            } else {
-                predContainer.style.background = 'rgba(239, 68, 68, 0.1)';
-                predContainer.style.border = '1px solid #EF4444';
-                predMsg.style.color = '#EF4444';
-                predMsg.innerText = `Probability: LOW (${((1-prob)*100).toFixed(1)}% of delay)`;
-                clarity = "Due to high volume in your area (Resource Bottleneck), this case may require additional oversight.";
-            }
+            predContainer.style.background = 'rgba(59, 130, 246, 0.05)';
+            predContainer.style.border = '1px solid #3B82F6';
+            predMsg.style.color = '#3B82F6';
+            predMsg.innerText = 'Multi-Threshold Prediction Timeline';
 
-            let modelsHtml = "";
-            if (pred.predictions) {
-                modelsHtml = '<div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">';
-                for (const [modelName, modelData] of Object.entries(pred.predictions)) {
-                    modelsHtml += `
-                        <div style="flex: 1; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-                            <div style="font-size: 9px; opacity: 0.7; margin-bottom: 2px;">${modelName}</div>
-                            <div style="font-size: 12px; font-weight: bold; color: ${modelData.probability >= 0.5 ? '#10B981' : '#EF4444'}">${(modelData.probability * 100).toFixed(1)}%</div>
+            let timelineHtml = '<div style="display:flex; flex-direction:column; gap:6px; margin-top:10px; margin-bottom: 10px;">';
+            if (pred.threshold_predictions) {
+                for (const [hr, hrData] of Object.entries(pred.threshold_predictions)) {
+                    const prob = hrData.ensemble_probability;
+                    const color = prob >= 0.5 ? '#10B981' : '#EF4444';
+                    
+                    let modelsHtml = '<div style="display: flex; gap: 4px; margin-top: 4px;">';
+                    for (const [mName, mData] of Object.entries(hrData.models)) {
+                        modelsHtml += `<div style="font-size: 8px; opacity:0.6; border: 1px solid rgba(255,255,255,0.1); padding: 2px; border-radius: 2px;">${mName}: ${(mData.probability*100).toFixed(0)}%</div>`;
+                    }
+                    modelsHtml += '</div>';
+
+                    timelineHtml += `
+                        <div style="background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; border-left: 3px solid ${color};">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="font-size: 11px;">Within ${hr.toUpperCase()}</strong>
+                                <span style="color: ${color}; font-weight: bold; font-size: 12px;">${(prob*100).toFixed(1)}%</span>
+                            </div>
+                            ${modelsHtml}
                         </div>
                     `;
                 }
-                modelsHtml += '</div>';
             }
+            timelineHtml += '</div>';
 
-            clarityDiv.innerHTML = `<strong>Citizen Clarity AI:</strong><br>${clarity}${modelsHtml}<br><small style="opacity:0.7">Expert Analysis: ${explanation.slice(0, 200)}...</small>`;
+            clarityDiv.innerHTML = `
+                <strong>Citizen Clarity AI Timeline:</strong>${timelineHtml}
+                <div style="margin-top: 24px; padding: 20px; background: var(--bg-surface); border-top: 3px solid var(--accent-color); border-radius: 8px; box-shadow: var(--shadow-lg);">
+                    <div style="font-size: 14px; font-weight: 800; color: var(--accent-color); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Expert Analysis</div>
+                    <div style="font-size: 13.5px; line-height: 1.6; font-style: normal; color: var(--text-primary);">
+                        ${marked.parse(explanation)}
+                    </div>
+                </div>
+            `;
 
         } catch (e) {
             alert("Acoustic Loop Failed: " + e);

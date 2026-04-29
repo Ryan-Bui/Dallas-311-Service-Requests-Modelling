@@ -16,6 +16,8 @@ URI = os.getenv("NEO4J_URI")
 USERNAME = os.getenv("NEO4J_USERNAME")
 PASSWORD = os.getenv("NEO4J_PASSWORD")
 
+_IN_MEMORY_HISTORY = {}
+
 class Neo4jChatMemory:
     """Manages chat history and session persistence in the Neo4j Knowledge Graph."""
     def __init__(self, session_id: str):
@@ -23,51 +25,89 @@ class Neo4jChatMemory:
         self.uri = os.getenv("NEO4J_URI")
         self.user = os.getenv("NEO4J_USERNAME")
         self.pwd = os.getenv("NEO4J_PASSWORD")
+        self.active = False
+        self.driver = None
+        
         if not all([self.uri, self.user, self.pwd]):
-            raise ValueError("Neo4j credentials missing for ChatMemory.")
-        self.driver = GraphDatabase.driver(self.uri, auth=(self.user, self.pwd))
+            return
+            
+        try:
+            self.driver = GraphDatabase.driver(self.uri, auth=(self.user, self.pwd))
+            # Test connectivity
+            self.driver.verify_connectivity()
+            self.active = True
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Neo4j connection failed: {e}. Using in-memory fallback.")
+            self.driver = None
 
     def add_message(self, role: str, content: str):
         """Creates a ChatMessage node and links it to the Session."""
-        with self.driver.session() as session:
-            # 1. Merge the Session node
-            # 2. Create the Message node
-            # 3. Link Message to Session
-            # 4. (Optional) Chain to the previous message for thread ordering
-            cypher = """
-            MERGE (s:UserSession {id: $session_id})
-            ON CREATE SET s.started_at = datetime()
-            
-            CREATE (m:ChatMessage {
-                id: $msg_id,
-                role: $role,
-                content: $content,
-                timestamp: datetime()
-            })
-            MERGE (s)-[:HAS_MESSAGE]->(m)
-            
-            WITH s, m
-            MATCH (s)-[:HAS_MESSAGE]->(prev:ChatMessage)
-            WHERE prev <> m AND NOT (prev)-[:NEXT]->()
-            MERGE (prev)-[:NEXT]->(m)
-            """
-            session.run(cypher, session_id=self.session_id, role=role, content=content, msg_id=str(uuid.uuid4()))
+        if not self.active:
+            if self.session_id not in _IN_MEMORY_HISTORY:
+                _IN_MEMORY_HISTORY[self.session_id] = []
+            _IN_MEMORY_HISTORY[self.session_id].append({"role": role, "content": content})
+            return
+
+        try:
+            with self.driver.session() as session:
+                cypher = """
+                MERGE (s:UserSession {id: $session_id})
+                ON CREATE SET s.started_at = datetime()
+                
+                CREATE (m:ChatMessage {
+                    id: $msg_id,
+                    role: $role,
+                    content: $content,
+                    timestamp: datetime()
+                })
+                MERGE (s)-[:HAS_MESSAGE]->(m)
+                
+                WITH s, m
+                MATCH (s)-[:HAS_MESSAGE]->(prev:ChatMessage)
+                WHERE prev <> m AND NOT (prev)-[:NEXT]->()
+                MERGE (prev)-[:NEXT]->(m)
+                """
+                session.run(cypher, session_id=self.session_id, role=role, content=content, msg_id=str(uuid.uuid4()))
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Neo4j add_message failed: {e}. Using in-memory fallback.")
+            if self.session_id not in _IN_MEMORY_HISTORY:
+                _IN_MEMORY_HISTORY[self.session_id] = []
+            _IN_MEMORY_HISTORY[self.session_id].append({"role": role, "content": content})
 
     def get_history(self, limit: int = 5) -> str:
         """Retrieves the last N messages to provide as context to the AI."""
-        with self.driver.session() as session:
-            cypher = """
-            MATCH (s:UserSession {id: $session_id})-[:HAS_MESSAGE]->(m:ChatMessage)
-            RETURN m.role as role, m.content as content, m.timestamp as ts
-            ORDER BY m.timestamp DESC LIMIT $limit
-            """
-            results = session.run(cypher, session_id=self.session_id, limit=limit)
-            history = [f"{r['role'].upper()}: {r['content']}" for r in results]
-            history.reverse() # Keep chronological order for the prompt
+        if not self.active:
+            history_list = _IN_MEMORY_HISTORY.get(self.session_id, [])[-limit:]
+            history = [f"{r['role'].upper()}: {r['content']}" for r in history_list]
+            return "\n".join(history) if history else "No previous conversation."
+
+        try:
+            with self.driver.session() as session:
+                cypher = """
+                MATCH (s:UserSession {id: $session_id})-[:HAS_MESSAGE]->(m:ChatMessage)
+                RETURN m.role as role, m.content as content, m.timestamp as ts
+                ORDER BY m.timestamp DESC LIMIT $limit
+                """
+                results = session.run(cypher, session_id=self.session_id, limit=limit)
+                history = [f"{r['role'].upper()}: {r['content']}" for r in results]
+                history.reverse() # Keep chronological order for the prompt
+                return "\n".join(history) if history else "No previous conversation."
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Neo4j get_history failed: {e}. Using in-memory fallback.")
+            history_list = _IN_MEMORY_HISTORY.get(self.session_id, [])[-limit:]
+            history = [f"{r['role'].upper()}: {r['content']}" for r in history_list]
             return "\n".join(history) if history else "No previous conversation."
 
     def close(self):
-        self.driver.close()
+        if self.active and self.driver:
+            try:
+                self.driver.close()
+            except Exception:
+                pass
+
 
 def get_domain_context(department: str = None, service_type: str = None, user_query: str = None, **kwargs) -> str:
     """
@@ -147,8 +187,13 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
 
             # 2. Fetch Top 1 Audit Report Source (High priority)
             report_source_cypher = """
-            CALL db.index.vector.queryNodes('chunk_embeddings', 5, $emb) 
-            YIELD node, score 
+            MATCH (node:DocumentChunk)
+            SEARCH node IN (
+                VECTOR INDEX chunk_embeddings 
+                FOR $emb 
+                LIMIT 5
+            )
+            SCORE AS score
             WHERE node.type = 'Report'
             RETURN node.content AS content, node.source AS source
             LIMIT 2
@@ -161,8 +206,13 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
 
             # 2. Fetch Top 2 Report Sources (Contextual)
             report_cypher = """
-            CALL db.index.vector.queryNodes('chunk_embeddings', 5, $emb) 
-            YIELD node, score 
+            MATCH (node:DocumentChunk)
+            SEARCH node IN (
+                VECTOR INDEX chunk_embeddings 
+                FOR $emb 
+                LIMIT 5
+            )
+            SCORE AS score
             WHERE node.type = 'Report'
             RETURN node.content AS content, node.source AS source
             LIMIT 2
@@ -193,7 +243,9 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
             
         return "\n".join(context_parts)
     except Exception as e:
-        return f"Hybrid Context Error: {e}"
+        import logging
+        logging.getLogger(__name__).warning(f"Neo4j get_domain_context failed: {e}. Using fallback.")
+        return f"Standard Dallas 311 procedures apply for {department}. (Graph Offline)"
 
 def create_explainability_chain(provider: str = None):
     """
