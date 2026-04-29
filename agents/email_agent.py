@@ -1,15 +1,28 @@
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from html import escape
 import logging
 
 logger = logging.getLogger(__name__)
+SMTP_HOST = "smtp.gmail.com"
+SMTP_SSL_PORT = 465
+SMTP_TIMEOUT_SECONDS = 15
 
 def _extract_metric_value(metrics: dict, key: str):
     value = metrics.get(key, {})
     if isinstance(value, dict):
         return value.get("value", "N/A")
     return value if value is not None else "N/A"
+
+
+def _build_executive_summary(best_model, roc_auc, accuracy, records) -> str:
+    return (
+        f"{best_model} is the current best model, with ROC-AUC {roc_auc} "
+        f"and accuracy {accuracy}. The latest run processed {records} records "
+        "to support faster prioritization of Dallas 311 requests."
+    )
 
 
 def send_gmail_report(sender_email: str, app_password: str, recipient_email: str, report_data: dict) -> tuple[bool, str]:
@@ -30,25 +43,13 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
     features = _extract_metric_value(metrics, "features")
     records = _extract_metric_value(metrics, "records")
     
-    # 1b. Generate LLM Executive Summary
-    llm_summary = "Automated predictive analysis completed successfully."
-    try:
-        from inference.llm_factory import get_llm
-        llm = get_llm(temperature=0.7)
-        prompt = f"""You are a senior data scientist analyzing the Dallas 311 ML pipeline performance. 
-        Write a hyper-concise executive summary (maximum 2 sentences) describing what this means for operational efficiency.
-        Do NOT use consultant jargon, fluff, or complex terminology. Speak plainly.
-        
-        Metrics:
-        - Best Model: {best_model}
-        - ROC-AUC: {roc_auc}
-        - Accuracy: {accuracy}
-        - Data Volume: {records} records processed.
-        """
-        response = llm.invoke(prompt)
-        llm_summary = response.content.strip()
-    except Exception as e:
-        logger.warning(f"Failed to generate LLM summary: {e}")
+    executive_summary = _build_executive_summary(best_model, roc_auc, accuracy, records)
+    safe_best_model = escape(str(best_model))
+    safe_accuracy = escape(str(accuracy))
+    safe_roc_auc = escape(str(roc_auc))
+    safe_features = escape(str(features))
+    safe_records = escape(str(records))
+    safe_summary = escape(str(executive_summary))
 
     text_content = (
         f"Dallas 311 Performance Summary\n"
@@ -57,7 +58,7 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
         f"ROC-AUC: {roc_auc}\n"
         f"Predictors Configured: {features}\n"
         f"Data Volume: {records}\n\n"
-        f"Executive Summary:\n{llm_summary}\n\n"
+        f"Executive Summary:\n{executive_summary}\n\n"
         f"This automated email was requested from the secure administrator portal of the Dallas 311 Service Requests Platform."
     )
 
@@ -81,7 +82,7 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
                         <tr>
                             <td>
                                 <span style="font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #1d4ed8;">Best Algorithm</span>
-                                <div style="font-size: 32px; font-weight: bold; color: #1e3a8a; margin-top: 4px;">{best_model}</div>
+                                <div style="font-size: 32px; font-weight: bold; color: #1e3a8a; margin-top: 4px;">{safe_best_model}</div>
                             </td>
                         </tr>
                     </table>
@@ -91,12 +92,12 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
                         <tr>
                             <td width="48%" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center;">
                                 <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #64748b;">ROC-AUC</span>
-                                <div style="font-size: 24px; font-weight: bold; color: #0f172a; margin-top: 4px;">{roc_auc}</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #0f172a; margin-top: 4px;">{safe_roc_auc}</div>
                             </td>
                             <td width="4%"></td>
                             <td width="48%" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center;">
                                 <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #64748b;">Accuracy</span>
-                                <div style="font-size: 24px; font-weight: bold; color: #0f172a; margin-top: 4px;">{accuracy}</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #0f172a; margin-top: 4px;">{safe_accuracy}</div>
                             </td>
                         </tr>
                     </table>
@@ -105,11 +106,11 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
                     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 8px;">
                         <tr>
                             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #475569; border-bottom: 1px solid #f1f5f9;">Predictors Configured</td>
-                            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right; border-bottom: 1px solid #f1f5f9;">{features}</td>
+                            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right; border-bottom: 1px solid #f1f5f9;">{safe_features}</td>
                         </tr>
                         <tr>
                             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #475569;">Data Volume</td>
-                            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{records}</td>
+                            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; text-align: right;">{safe_records}</td>
                         </tr>
                     </table>
 
@@ -117,8 +118,8 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
                     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 24px;">
                         <tr>
                             <td>
-                                <strong style="color: #0f172a; font-size: 14px; display: block; margin-bottom: 6px;">🧠 AI Executive Insight</strong>
-                                <p style="font-size: 14px; color: #334155; margin: 0;">{llm_summary}</p>
+                                <strong style="color: #0f172a; font-size: 14px; display: block; margin-bottom: 6px;">Executive Insight</strong>
+                                <p style="font-size: 14px; color: #334155; margin: 0;">{safe_summary}</p>
                             </td>
                         </tr>
                     </table>
@@ -145,13 +146,24 @@ def send_gmail_report(sender_email: str, app_password: str, recipient_email: str
     recipients = [recipient_email] if isinstance(recipient_email, str) else list(recipient_email)
 
     try:
-        logger.info("Opening SSL link to smtp.gmail.com on port 465...")
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        logger.info("Opening SSL link to %s on port %s...", SMTP_HOST, SMTP_SSL_PORT)
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_SSL_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
             server.ehlo()
             server.login(sender_email, app_password)
             server.sendmail(sender_email, recipients, msg.as_string())
         logger.info("Report successfully sent over secure protocol!")
         return True, ""
+    except smtplib.SMTPAuthenticationError:
+        error_message = "Gmail rejected the login. Use the Gmail address and a 16-character App Password."
+        logger.error("SMTP Dispatch failure: %s", error_message)
+        return False, error_message
+    except (socket.timeout, TimeoutError):
+        error_message = (
+            "Timed out connecting to Gmail SMTP. If this is running on Render free tier, "
+            "outbound SMTP ports 25, 465, and 587 are blocked; use a paid instance or an email HTTP API."
+        )
+        logger.error("SMTP Dispatch failure: %s", error_message)
+        return False, error_message
     except Exception as e:
         error_message = str(e)
         logger.error(f"SMTP Dispatch failure: {error_message}")
