@@ -2029,14 +2029,13 @@ def api_send_report():
             report_data=live_results
         )
     else:
-        sender_email = os.getenv("MAIL_DEFAULT_SENDER")
-        app_password = os.getenv("MAIL_APP_PASSWORD")
-
-        # Fallback to session if env vars are missing or placeholders
-        if not sender_email or sender_email == "your-email@gmail.com":
+        # Prioritize session credentials if logged in, fallback to .env
+        if session.get('admin_email') and session.get('admin_password'):
             sender_email = session.get('admin_email')
-        if not app_password or app_password == "your-app-password":
             app_password = session.get('admin_password')
+        else:
+            sender_email = os.getenv("MAIL_DEFAULT_SENDER")
+            app_password = os.getenv("MAIL_APP_PASSWORD")
 
         if not sender_email or not app_password:
             return jsonify({"success": False, "error": "Email sender not configured. Please set RESEND_API_KEY and RESEND_FROM_EMAIL, or configure MAIL_DEFAULT_SENDER and MAIL_APP_PASSWORD for Gmail SMTP."}), 400
