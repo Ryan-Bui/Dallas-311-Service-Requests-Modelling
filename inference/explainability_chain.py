@@ -122,8 +122,12 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
     
     try:
         driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
+        driver.verify_connectivity()
+    except Exception as e:
+        return f"Standard Dallas 311 procedures apply for {department}. (Graph Connection Offline: {e})"
         
-        # --- PART 1: Cypher Graph Search (Grounded Audit & Bottleneck Reasoning) ---
+    # --- PART 1: Cypher Graph Search (Grounded Audit & Bottleneck Reasoning) ---
+    try:
         if department or service_type:
             with driver.session() as session:
                 # Query 1: Departmental Audit Topics
@@ -137,7 +141,7 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
                 for record in audit_results:
                     context_parts.append(f"- RECENT AUDIT: {record['topic']} (Ref: {record['objective']})")
 
-                # Query 2: District-Specific Bottlenecks (The 'Grounded' part)
+                # Query 2: District-Specific Bottlenecks
                 bottleneck_cypher = """
                 MATCH (b)-[:AFFECTS|IMPACTS]->(d)
                 WHERE (b:Bottleneck OR b:Issue) AND (d:District OR d:Area) AND d.id = $district_id
@@ -145,24 +149,24 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
                     coalesce(b.cause, b.description, b.name) AS cause, 
                     coalesce(b.severity, b.impact, 'Moderate') AS severity
                 """
-                # Note: We fetch the district from the manual_infer inputs/features
                 dist_id = str(kwargs.get("district", "Unknown"))
                 bottleneck_results = session.run(bottleneck_cypher, district_id=dist_id)
                 for record in bottleneck_results:
                     context_parts.append(f"- DISTRICT ALERT: {record['cause']} (Severity: {record['severity']})")
+    except Exception as e:
+        context_parts.append(f"- Graph Search Notice: {e}")
 
-        # --- PART 2: Vector Search with Neo4j Natively ---
-        # Switch to GoogleGenerativeAIEmbeddings (AI Studio) to bypass project ID requirements
+    # --- PART 2: Vector Search & Insights ---
+    try:
         embeddings_service = GoogleGenerativeAIEmbeddings(
             model="models/gemini-embedding-001",
             google_api_key=os.getenv("GOOGLE_API_KEY")
         )
-        # 0. Set dynamic search query
         final_search_query = user_query if user_query else f"Staffing, budget, and performance for {department or 'Dallas 311'}"
         query_embedding = embeddings_service.embed_query(final_search_query)
         
         with driver.session() as session:
-            # 0. Fetch Expert Human Wisdom (The Golden Source)
+            # Golden Human Wisdom
             expert_cypher = "MATCH (w:ExpertWisdom) RETURN w.topic AS topic, w.content AS content"
             expert_results = session.run(expert_cypher)
             expert_wisdom = list(expert_results)
@@ -171,7 +175,7 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
                 for w in expert_wisdom:
                     context_parts.append(f"  * {w['topic']}: {w['content']}")
 
-            # 1. Fetch Top 1 Insight Source (Explorer Agent real-time search)
+            # Explorer Agent Insights
             insight_cypher = """
             MATCH (c:DocumentChunk {type: 'Insight'})
             WHERE c.service =~ $service_regex OR c.content CONTAINS $service_type
@@ -185,46 +189,30 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
                 context_parts.append("\n- WEB-OPTIMIZED INSIGHTS (Explorer Agent):")
                 context_parts.append(f"  [Updated: {insight_record['ts']}] {insight_record['content'][:500]}...")
 
-            # 2. Fetch Top 1 Audit Report Source (High priority)
-            report_source_cypher = """
-            MATCH (node:DocumentChunk)
-            SEARCH node IN (
-                VECTOR INDEX chunk_embeddings 
-                FOR $emb 
-                LIMIT 5
-            )
-            SCORE AS score
-            WHERE node.type = 'Report'
-            RETURN node.content AS content, node.source AS source
-            LIMIT 2
-            """
-            report_results = session.run(report_source_cypher, emb=query_embedding)
-            report_record = report_results.peek() # Use peek to avoid consuming if multiple
-            if report_record:
-                context_parts.append("\n- GOLDEN BUSINESS RULES (High Priority):")
-                context_parts.append(f"  [Ref: {report_record['source']}] {report_record['content'][:500]}...")
+            # Try Vector search defensively
+            try:
+                report_source_cypher = """
+                MATCH (node:DocumentChunk)
+                SEARCH node IN (
+                    VECTOR INDEX chunk_embeddings 
+                    FOR $emb 
+                    LIMIT 5
+                )
+                SCORE AS score
+                WHERE node.type = 'Report'
+                RETURN node.content AS content, node.source AS source
+                LIMIT 2
+                """
+                report_results = session.run(report_source_cypher, emb=query_embedding)
+                reports = list(report_results)
+                if reports:
+                    context_parts.append("\n- GOLDEN BUSINESS RULES (Vector RAG):")
+                    for record in reports:
+                        context_parts.append(f"  [Ref: {record['source']}] {record['content'][:300]}...")
+            except Exception:
+                pass
 
-            # 2. Fetch Top 2 Report Sources (Contextual)
-            report_cypher = """
-            MATCH (node:DocumentChunk)
-            SEARCH node IN (
-                VECTOR INDEX chunk_embeddings 
-                FOR $emb 
-                LIMIT 5
-            )
-            SCORE AS score
-            WHERE node.type = 'Report'
-            RETURN node.content AS content, node.source AS source
-            LIMIT 2
-            """
-            report_results = session.run(report_cypher, emb=query_embedding)
-            reports = list(report_results)
-            if reports:
-                context_parts.append("\n- SUPPLEMENTAL REPORT CONTEXT:")
-                for record in reports:
-                    context_parts.append(f"  [Source: {record['source']}] {record['content'][:300]}...")
-
-            # 3. Fetch External Factors (Seasonality / Weather Backlogs)
+            # External Factors
             factor_cypher = """
             MATCH (s:Service {name: $service_type})-[:AFFECTED_BY]->(f:ExternalFactor)
             RETURN f.name AS factor, f.impact AS impact
@@ -236,16 +224,18 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
                 for record in factors:
                     context_parts.append(f"  * {record['factor']}: {record['impact']}")
 
-        driver.close()
-
-        if len(context_parts) == 1:
-            return f"Standard Dallas 311 procedures apply for {department}."
-            
-        return "\n".join(context_parts)
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Neo4j get_domain_context failed: {e}. Using fallback.")
-        return f"Standard Dallas 311 procedures apply for {department}. (Graph Offline)"
+        context_parts.append(f"- Vector/Insight Notice: {e}")
+
+    try:
+        driver.close()
+    except Exception:
+        pass
+
+    if len(context_parts) == 1:
+        return f"Standard Dallas 311 procedures apply for {department}."
+        
+    return "\n".join(context_parts)
 
 def create_explainability_chain(provider: str = None):
     """
