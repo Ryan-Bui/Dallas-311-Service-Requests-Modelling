@@ -27,4 +27,5 @@ google-cloud-aiplatform
 langchain-google-genai
 langchain-community
 tavily-python
+langchain-tavily
 psutil
