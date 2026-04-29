@@ -58,7 +58,7 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 import pandas as pd
-from flask import Flask, Response, jsonify, request, send_from_directory, url_for
+from flask import Flask, Response, jsonify, request, send_from_directory, url_for, session
 try:
     from flask_cors import CORS as _CORS
 except ImportError:
@@ -71,6 +71,7 @@ from inference.llm_factory import get_llm
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder=str(UI_DIR))
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dallas_311_fallback_secret")
 if _CORS:
     _CORS(app)
 
@@ -1866,6 +1867,66 @@ def chat():
     except Exception as e:
         logger.error(f"[Chat] Fatal Orchestration Error: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    data = request.json or {}
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"success": False, "error": "Email and Password are required."}), 400
+        
+    if not email.endswith('@gmail.com'):
+         return jsonify({"success": False, "error": "Only standard Gmail addresses are allowed."}), 400
+
+    session['admin_email'] = email
+    session['admin_password'] = password
+    return jsonify({"success": True, "message": "Logged in successfully.", "user": email})
+
+@app.route('/api/auth/logout', methods=['POST', 'GET'])
+def api_logout():
+    session.pop('admin_email', None)
+    session.pop('admin_password', None)
+    return jsonify({"success": True, "message": "Logged out successfully."})
+
+@app.route('/api/auth/status', methods=['GET'])
+def api_auth_status():
+    if 'admin_email' in session:
+        return jsonify({"logged_in": True, "user": session['admin_email']})
+    return jsonify({"logged_in": False})
+
+@app.route('/api/send_email_report', methods=['POST'])
+def api_send_report():
+    if 'admin_email' not in session or 'admin_password' not in session:
+        return jsonify({"success": False, "error": "Authentication required. Please log in first."}), 401
+        
+    data = request.json or {}
+    recipient = data.get('recipient_email')
+    
+    if not recipient:
+        return jsonify({"success": False, "error": "Recipient email is required."}), 400
+        
+    with _lock:
+        live_results = _state.get("results")
+        if not live_results:
+            live_results = _load_persisted_results()
+            
+    if not live_results:
+        return jsonify({"success": False, "error": "No performance data available to email."}), 400
+        
+    from agents.email_agent import send_gmail_report
+    success = send_gmail_report(
+        sender_email=session['admin_email'],
+        app_password=session['admin_password'],
+        recipient_email=recipient,
+        report_data=live_results
+    )
+    
+    if success:
+        return jsonify({"success": True, "message": f"Report sent securely to {recipient}."})
+    else:
+        return jsonify({"success": False, "error": "Failed to send email. Check your credentials/App Password."}), 500
 
 @app.route('/favicon.png')
 def serve_favicon():

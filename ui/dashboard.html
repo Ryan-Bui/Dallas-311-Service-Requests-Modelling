@@ -915,6 +915,36 @@
 </head>
 
 <body>
+  <!-- Admin Login Modal -->
+  <div id="admin-login-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; box-shadow: var(--shadow-lg);">
+      <h3 style="color: var(--text-primary); font-family: var(--font-main); margin-bottom: 5px;">🔑 Admin Login (Gmail)</h3>
+      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">Access reporting modules by entering your standard Gmail address and an App Password.</p>
+      
+      <input type="email" id="auth-email" placeholder="you@gmail.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
+      <input type="password" id="auth-password" placeholder="16-character App Password" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
+      
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
+        <button class="btn" onclick="closeLoginModal()" style="background: var(--bg-card); border: 1px solid var(--border);">Cancel</button>
+        <button class="btn btn-primary" onclick="submitLogin()">Log In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Email Report Modal -->
+  <div id="send-report-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-surface); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; box-shadow: var(--shadow-lg);">
+      <h3 style="color: var(--text-primary); font-family: var(--font-main); margin-bottom: 5px;">📧 Send Executive Report</h3>
+      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">Provide a recipient's inbox to share standard diagnostic state updates.</p>
+      
+      <input type="email" id="report-recipient" placeholder="recipient@example.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
+      
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
+        <button class="btn" onclick="closeSendReportModal()" style="background: var(--bg-card); border: 1px solid var(--border);">Cancel</button>
+        <button class="btn btn-primary" id="submit-send-report-btn" onclick="submitSendReport()">Send Dispatch</button>
+      </div>
+    </div>
+  </div>
   <div class="layout">
     <div class="topnav">
       <div style="display: flex; flex-direction: column; gap: 0;">
@@ -946,9 +976,13 @@
           <button class="btn btn-primary" onclick="runPipeline()"
             style="border-radius: 6px; box-shadow: 0 4px 10px var(--primary-glow); font-weight: 800; font-size: 12px; padding: 8px 12px;">Initiate
             Pipeline</button>
-          <button class="btn"
+          
+          <button class="btn btn-primary" id="email-report-nav-btn" onclick="openSendReportModal()"
+            style="display: none; border-radius: 6px; box-shadow: 0 4px 10px var(--accent-glow); background: var(--accent-color); font-weight: 800; font-size: 12px; padding: 8px 12px;">📧 Email Report</button>
+
+          <button class="btn" id="admin-login-nav-btn"
             style="background: var(--bg-card); border: 1px solid var(--border); font-size: 11px; color: var(--color-admin); font-weight: 700; padding: 8px 12px;"
-            onclick="alert('Admin Login Module Pending')">Admin</button>
+            onclick="toggleAuthAction()">Admin Login</button>
         </div>
       </div>
     </div>
@@ -2129,6 +2163,113 @@
         list.appendChild(card);
       });
     }
+
+    // ── AUTH & REPORT LOGIC ──────────────────────────────────────────────────
+    let isLoggedIn = false;
+
+    async function checkAuthStatus() {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        const navBtn = document.getElementById('admin-login-nav-btn');
+        const emailBtn = document.getElementById('email-report-nav-btn');
+        
+        if (data.logged_in) {
+          isLoggedIn = true;
+          if (navBtn) navBtn.innerText = 'Logout';
+          if (emailBtn) emailBtn.style.display = 'block';
+        } else {
+          isLoggedIn = false;
+          if (navBtn) navBtn.innerText = 'Admin Login';
+          if (emailBtn) emailBtn.style.display = 'none';
+        }
+      } catch (e) { console.error("Auth check failed", e); }
+    }
+
+    function toggleAuthAction() {
+      if (isLoggedIn) {
+        logoutAdmin();
+      } else {
+        openLoginModal();
+      }
+    }
+
+    function openLoginModal() {
+      document.getElementById('admin-login-modal').style.display = 'flex';
+    }
+    function closeLoginModal() {
+      document.getElementById('admin-login-modal').style.display = 'none';
+    }
+    function openSendReportModal() {
+      document.getElementById('send-report-modal').style.display = 'flex';
+    }
+    function closeSendReportModal() {
+      document.getElementById('send-report-modal').style.display = 'none';
+    }
+
+    async function submitLogin() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+      
+      if (!email || !password) return alert("All fields are mandatory.");
+      
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert("Login successful!");
+        closeLoginModal();
+        checkAuthStatus();
+      } else {
+        alert("Login failed: " + data.error);
+      }
+    }
+
+    async function logoutAdmin() {
+      const res = await fetch('/api/auth/logout', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert("Logged out securely.");
+        checkAuthStatus();
+      }
+    }
+
+    async function submitSendReport() {
+      const recipient = document.getElementById('report-recipient').value.trim();
+      if (!recipient) return alert("Please specify the recipient.");
+      
+      const btn = document.getElementById('submit-send-report-btn');
+      btn.innerText = 'Dispatching...';
+      btn.disabled = true;
+      
+      try {
+        const res = await fetch('/api/send_email_report', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ recipient_email: recipient })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          alert("Success: " + data.message);
+          closeSendReportModal();
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (err) {
+        alert("Network fault: " + err);
+      } finally {
+        btn.innerText = 'Send Dispatch';
+        btn.disabled = false;
+      }
+    }
+
+    // Call auth check on load
+    checkAuthStatus();
 
     function startNewInference(id) {
       historyInferenceTarget = id;
