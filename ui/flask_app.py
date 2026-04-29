@@ -1505,8 +1505,16 @@ def manual_infer():
                 for col in X_raw.columns:
                     X_raw[col] = pd.to_numeric(X_raw[col], errors='coerce')
                         
-                X_final = pd.DataFrame(imputer.transform(X_raw), columns=feature_names)
-                X_final = pd.DataFrame(scaler.transform(X_final), columns=feature_names)
+                try:
+                    X_final = pd.DataFrame(imputer.transform(X_raw), columns=feature_names)
+                except Exception as imputer_error:
+                    logger.warning(f"Pickled imputer failed: {imputer_error}. Using fillna(0) as fallback.")
+                    X_final = X_raw.fillna(0)
+
+                try:
+                    X_final = pd.DataFrame(scaler.transform(X_final), columns=feature_names)
+                except Exception as scaler_error:
+                    logger.warning(f"Pickled scaler failed: {scaler_error}. Proceeding without scaling.")
             else:
                 X_final = X_raw
 
