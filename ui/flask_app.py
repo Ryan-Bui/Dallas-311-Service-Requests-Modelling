@@ -1503,8 +1503,7 @@ def manual_infer():
                 # Coerce any remaining unencoded strings (like missing label encoders) to NaN
                 # so the imputer can safely fill them with the median.
                 for col in X_raw.columns:
-                    if X_raw[col].dtype == object:
-                        X_raw[col] = pd.to_numeric(X_raw[col], errors='coerce')
+                    X_raw[col] = pd.to_numeric(X_raw[col], errors='coerce')
                         
                 X_final = pd.DataFrame(imputer.transform(X_raw), columns=feature_names)
                 X_final = pd.DataFrame(scaler.transform(X_final), columns=feature_names)
