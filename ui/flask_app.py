@@ -1359,6 +1359,158 @@ def infer_from_history():
 @app.route("/api/manual_infer", methods=["POST"])
 def manual_infer():
     """Run model inference on a single manually entered row."""
+    # Check for the 500k model first
+    xgb_path = ARTIFACTS_DIR / "artifacts" / "xgb_model_500k.json"
+    rf_path = ARTIFACTS_DIR / "artifacts" / "random_forest_500k.joblib"
+    lr_path = ARTIFACTS_DIR / "artifacts" / "logistic_regression_500k.joblib"
+    feat_path = ARTIFACTS_DIR / "artifacts" / "feature_names.pkl"
+    imp_path = ARTIFACTS_DIR / "artifacts" / "imputer.pkl"
+    enc_path = ARTIFACTS_DIR / "artifacts" / "label_encoders.pkl"
+    scale_path = ARTIFACTS_DIR / "artifacts" / "scaler.pkl"
+
+    if xgb_path.exists():
+        import xgboost as xgb
+        import joblib
+        import pandas as pd
+        import numpy as np
+
+        try:
+            row = request.get_json()
+            if not row:
+                return jsonify({"error": "No data provided"}), 400
+
+            # 1. Load preprocessors
+            feature_names = joblib.load(feat_path)
+            imputer = joblib.load(imp_path)
+            label_encoders = joblib.load(enc_path)
+            scaler = joblib.load(scale_path)
+
+            model = xgb.XGBClassifier()
+            model.load_model(str(xgb_path))
+
+            # 2. Preprocess row
+            df = pd.DataFrame([row])
+
+            # Extract time features
+            if "Created Date" in df.columns and pd.notnull(df["Created Date"].iloc[0]):
+                df["Created Date"] = pd.to_datetime(df["Created Date"])
+                df["hour"] = df["Created Date"].dt.hour
+                df["day_of_week"] = df["Created Date"].dt.dayofweek
+                df["month"] = df["Created Date"].dt.month
+            else:
+                now = pd.Timestamp.now()
+                df["hour"] = now.hour
+                df["day_of_week"] = now.dayofweek
+                df["month"] = now.month
+
+            # ERT cleaning
+            if 'Estimated Response Time Description' in df.columns and pd.notnull(df['Estimated Response Time Description'].iloc[0]):
+                df['ERT_days'] = pd.to_numeric(df['Estimated Response Time Description'].str.extract(r'(\d+)')[0], errors='coerce')
+            else:
+                df['ERT_days'] = np.nan
+
+            # Cast categoricals to string to allow missing categories
+            for col in ['Service Request Type', 'Priority', 'Method Received Description', 'Department']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str)
+
+            # Apply Label Encoders
+            for col, le in label_encoders.items():
+                if col == 'Department_grouped' and 'Department' in df.columns:
+                    val = df['Department'].iloc[0]
+                    if val in le.classes_:
+                        df[col] = le.transform([val])[0]
+                    else:
+                        df[col] = le.transform(['Other'])[0] if 'Other' in le.classes_ else 0
+                elif col in df.columns:
+                    val = df[col].iloc[0]
+                    if val in le.classes_:
+                        df[col] = le.transform([val])[0]
+                    else:
+                        df[col] = 0
+
+            # Reconstruct columns exactly as feature_names
+            X_final = pd.DataFrame(0, index=[0], columns=feature_names)
+
+            # Copy numeric / label encoded features
+            for col in df.columns:
+                if col in feature_names:
+                    X_final[col] = df[col].iloc[0]
+
+            # Copy One-Hot Encoded features
+            for col in df.select_dtypes(include=['object', 'category']).columns:
+                val = df[col].iloc[0]
+                ohe_col = f"{col}_{val}"
+                if ohe_col in feature_names:
+                    X_final[ohe_col] = 1
+
+            # 3. Impute & Scale
+            X_final = pd.DataFrame(imputer.transform(X_final), columns=feature_names)
+            X_final = pd.DataFrame(scaler.transform(X_final), columns=feature_names)
+
+            # 4. Predict (Ensemble)
+            preds = {}
+            
+            # XGBoost
+            xgb_prob = float(model.predict_proba(X_final)[0][1])
+            xgb_class = int(model.predict(X_final)[0])
+            preds["XGBoost"] = {"class": xgb_class, "probability": xgb_prob}
+            
+            total_prob = xgb_prob
+            model_count = 1
+            
+            # Random Forest
+            if rf_path.exists():
+                rf_model = joblib.load(str(rf_path))
+                rf_prob = float(rf_model.predict_proba(X_final)[0][1])
+                rf_class = int(rf_model.predict(X_final)[0])
+                preds["Random Forest"] = {"class": rf_class, "probability": rf_prob}
+                total_prob += rf_prob
+                model_count += 1
+                
+            # Logistic Regression
+            if lr_path.exists():
+                lr_model = joblib.load(str(lr_path))
+                if hasattr(lr_model, "predict_proba"):
+                    lr_prob = float(lr_model.predict_proba(X_final)[0][1])
+                else:
+                    lr_prob = float(lr_model.predict(X_final)[0])
+                lr_class = int(lr_model.predict(X_final)[0])
+                preds["Logistic Regression"] = {"class": lr_class, "probability": lr_prob}
+                total_prob += lr_prob
+                model_count += 1
+
+            ensemble_prob = total_prob / model_count
+            ensemble_class = 1 if ensemble_prob >= 0.5 else 0
+
+            # 5. Explain
+            coef_summary = ""
+            if hasattr(model, 'feature_importances_'):
+                imps = model.feature_importances_
+                top_idx = np.argsort(imps)[-5:][::-1]
+                coef_summary = "\n".join([f"- {feature_names[i]}: {imps[i]:.4f} (Importance)" for i in top_idx])
+
+            chain = create_explainability_chain()
+            explanation = chain.invoke({
+                "prediction": f"{'Fast' if ensemble_class == 1 else 'Slow'} Close (Ensemble Probability: {ensemble_prob:.2%})",
+                "coef_summary": coef_summary,
+                "department": row.get("Department"),
+                "district": row.get("City Council District")
+            })
+
+            return jsonify({
+                "prediction": ensemble_class,
+                "probability": ensemble_prob,
+                "predictions": preds,
+                "explanation": explanation,
+                "row": row
+            })
+
+        except Exception as e:
+            logger.exception("Manual inference with 500k XGBoost failed")
+            return jsonify({"error": f"500k model error: {str(e)}"}), 500
+
+    # Baseline fallback
     m_path = ARTIFACTS_DIR / "best_model.joblib"
     e_path = ARTIFACTS_DIR / "encoders.joblib"
 
@@ -1370,17 +1522,13 @@ def manual_infer():
         if not row:
             return jsonify({"error": "No data provided"}), 400
 
-        # 1. Preprocess
         model = joblib.load(m_path)
         encoders = joblib.load(e_path)
         X_final = _preprocess_manual_row(row, encoders)
 
-        # 2. Predict
         prediction_prob = model.predict_proba(X_final)[0][1]
         prediction_class = int(model.predict(X_final)[0])
         
-        # 3. Explain (Agentic reasoning)
-        # We build a 'coef_summary' if it's a linear model, or just use features
         coef_summary = ""
         if hasattr(model, 'coef_'):
             import pandas as pd
@@ -1390,12 +1538,10 @@ def manual_infer():
             })
             coef_summary = format_coef_summary(df_coef)
         elif hasattr(model, 'feature_importances_'):
-            # Fallback for trees: top local features
             imps = model.feature_importances_
             top_idx = np.argsort(imps)[-5:][::-1]
             coef_summary = "\n".join([f"- {X_final.columns[i]}: {imps[i]:.4f} (Importance)" for i in top_idx])
 
-        # Call the explainability chain
         chain = create_explainability_chain()
         explanation = chain.invoke({
             "prediction": f"{'Fast' if prediction_class == 1 else 'Slow'} Close (Probability: {prediction_prob:.2%})",
@@ -1412,7 +1558,7 @@ def manual_infer():
         })
 
     except Exception as e:
-        logger.exception("Manual inference failed")
+        logger.exception("Manual inference fallback failed")
         return jsonify({"error": str(e)}), 500
 
 
@@ -1437,6 +1583,34 @@ def acoustic_extract():
     except Exception as e:
         print(f"[STAGE A ERROR] {e}")
         return jsonify({"debug_error": str(e)}), 500
+
+
+@app.route('/api/transcribe', methods=['POST'])
+def transcribe_audio():
+    """Transcribe audio using Groq Whisper API (free tier, uses existing GROQ_API_KEY)."""
+    try:
+        from groq import Groq as GroqClient
+        if 'audio' not in request.files:
+            return jsonify({"error": "No audio file provided"}), 400
+
+        audio_file = request.files['audio']
+        audio_bytes = audio_file.read()
+        filename = audio_file.filename or "recording.webm"
+
+        client = GroqClient(api_key=os.getenv("GROQ_API_KEY"))
+        transcription = client.audio.transcriptions.create(
+            file=(filename, audio_bytes),
+            model="whisper-large-v3-turbo",
+            response_format="json",
+            language="en",
+            temperature=0.0
+        )
+
+        return jsonify({"transcription": transcription.text.strip()})
+
+    except Exception as e:
+        logger.exception("Transcription failed")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/reset", methods=["POST"])

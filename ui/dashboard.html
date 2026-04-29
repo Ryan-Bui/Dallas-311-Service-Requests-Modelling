@@ -977,7 +977,12 @@
 
         <div style="display: grid; grid-template-columns: 1fr 400px; gap: 24px;">
           <div class="data-card">
-            <h3>Transcript Input (Simulated Call)</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="margin: 0;">Transcript Input (Simulated Call)</h3>
+              <button id="mic-btn" class="btn" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 16px; font-size: 12px; display: flex; align-items: center; gap: 8px; border-radius: 8px; transition: var(--transition);" onclick="toggleMic()">
+                <span id="mic-icon" style="font-size: 14px;">🎙️</span> <span id="mic-text">Record from Mic</span>
+              </button>
+            </div>
             <textarea id="acoustic-transcript" class="btn" style="width:100%; height: 200px; background:var(--bg-surface); text-align:left; font-family: 'Courier New', monospace; padding: 16px; font-size: 14px; margin-bottom: 16px;" placeholder="Example: 'Hello, I'm calling from District 4. There is a stray dog near the park on 5th street, it looks aggressive. Can you send someone soon?'"></textarea>
             
             <div style="display: flex; gap: 12px; margin-bottom: 24px;">
@@ -1785,9 +1790,24 @@
                 strategicMeaning = "Flagged as a potential 'Slow-Close' outlier.";
             }
             
+            let modelsHtml = "";
+            if (data.predictions) {
+                modelsHtml = '<div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">';
+                for (const [modelName, modelData] of Object.entries(data.predictions)) {
+                    modelsHtml += `
+                        <div style="flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="font-size: 10px; opacity: 0.7; margin-bottom: 4px;">${modelName}</div>
+                            <div style="font-size: 14px; font-weight: bold; color: ${modelData.probability >= 0.5 ? '#10B981' : '#EF4444'}">${(modelData.probability * 100).toFixed(1)}%</div>
+                        </div>
+                    `;
+                }
+                modelsHtml += '</div>';
+            }
+
             reasonDiv.innerHTML = `
                 <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">"${clarityMsg}"</div>
                 <div style="font-size: 11px; opacity: 0.8; margin-bottom: 12px; font-style: italic;">Strategic Context: ${strategicMeaning}</div>
+                ${modelsHtml}
                 <hr style="border:0; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0;">
                 <strong>Expert AI Insight:</strong><br>${marked.parse(data.explanation || "No explanation generated.")}
             `;
@@ -2035,7 +2055,21 @@
                 clarity = "Due to high volume in your area (Resource Bottleneck), this case may require additional oversight.";
             }
 
-            clarityDiv.innerHTML = `<strong>Citizen Clarity AI:</strong><br>${clarity}<br><br><small style="opacity:0.7">Expert Analysis: ${explanation.slice(0, 200)}...</small>`;
+            let modelsHtml = "";
+            if (pred.predictions) {
+                modelsHtml = '<div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">';
+                for (const [modelName, modelData] of Object.entries(pred.predictions)) {
+                    modelsHtml += `
+                        <div style="flex: 1; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="font-size: 9px; opacity: 0.7; margin-bottom: 2px;">${modelName}</div>
+                            <div style="font-size: 12px; font-weight: bold; color: ${modelData.probability >= 0.5 ? '#10B981' : '#EF4444'}">${(modelData.probability * 100).toFixed(1)}%</div>
+                        </div>
+                    `;
+                }
+                modelsHtml += '</div>';
+            }
+
+            clarityDiv.innerHTML = `<strong>Citizen Clarity AI:</strong><br>${clarity}${modelsHtml}<br><small style="opacity:0.7">Expert Analysis: ${explanation.slice(0, 200)}...</small>`;
 
         } catch (e) {
             alert("Acoustic Loop Failed: " + e);
@@ -2050,6 +2084,72 @@
         if (type === 'dog') area.value = "Hello, I am calling from city council district 4. There is a loose dog running around near the neighborhood park on 54th street. It looks a bit aggressive and I'm worried about the kids. Can we get someone out here soon? Thanks.";
         if (type === 'pothole') area.value = "I'd like to report a massive pothole in the middle of the road. I'm in District 2. It nearly popped my tire. It's on Main st near the intersection. This needs to be repaired before someone gets hurt.";
         if (type === 'weeds') area.value = "The lot next to me at 742 Evergreen is completely overgrown. High weeds and trash everywhere. I'm calling to report a code violation. It's been like this for weeks. I think I'm in District 7.";
+    }
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    async function toggleMic() {
+        const btn = document.getElementById('mic-btn');
+        const icon = document.getElementById('mic-icon');
+        const text = document.getElementById('mic-text');
+        const textarea = document.getElementById('acoustic-transcript');
+
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            icon.innerText = "🎙️";
+            text.innerText = "Transcribing...";
+            btn.style.background = "var(--bg-surface)";
+            btn.style.borderColor = "var(--border)";
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+
+                try {
+                    const response = await fetch('/api/transcribe', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+                    
+                    if (data.transcription) {
+                        textarea.value = data.transcription;
+                    } else if (data.error) {
+                        alert("Transcription Error: " + data.error);
+                    }
+                } catch (e) {
+                    alert("Failed to send audio to server: " + e);
+                } finally {
+                    text.innerText = "Record from Mic";
+                }
+                
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            icon.innerText = "⏹️";
+            text.innerText = "Recording... Click to Stop";
+            btn.style.background = "rgba(239, 68, 68, 0.2)";
+            btn.style.borderColor = "#EF4444";
+
+        } catch (err) {
+            alert("Could not access microphone: " + err);
+            icon.innerText = "🎙️";
+            text.innerText = "Record from Mic";
+        }
     }
 
     initTheme();
