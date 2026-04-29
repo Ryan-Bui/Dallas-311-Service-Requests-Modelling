@@ -1,5 +1,4 @@
 from neo4j import GraphDatabase
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -9,8 +8,12 @@ import pandas as pd
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+from .embedding_factory import create_embeddings_service, embed_query_text
+
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env", override=True)
 
 URI = os.getenv("NEO4J_URI")
 USERNAME = os.getenv("NEO4J_USERNAME")
@@ -158,12 +161,9 @@ def get_domain_context(department: str = None, service_type: str = None, user_qu
 
     # --- PART 2: Vector Search & Insights ---
     try:
-        embeddings_service = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001",
-            google_api_key=os.getenv("GOOGLE_API_KEY")
-        )
+        embeddings_service = create_embeddings_service()
         final_search_query = user_query if user_query else f"Staffing, budget, and performance for {department or 'Dallas 311'}"
-        query_embedding = embeddings_service.embed_query(final_search_query)
+        query_embedding = embed_query_text(embeddings_service, final_search_query)
         
         with driver.session() as session:
             # Golden Human Wisdom

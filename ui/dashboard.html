@@ -915,19 +915,45 @@
 </head>
 
 <body>
-  <!-- Admin Login Modal -->
+  <!-- Admin Login / Registration Modal -->
   <div id="admin-login-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center;">
     <div style="background: var(--bg-surface); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; box-shadow: var(--shadow-lg);">
-      <h3 style="color: var(--text-primary); font-family: var(--font-main); margin-bottom: 5px;">🔑 Admin Login (Gmail)</h3>
-      <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">Access reporting modules by entering your standard Gmail address and an App Password.</p>
       
-      <input type="email" id="auth-email" placeholder="you@gmail.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
-      <input type="password" id="auth-password" placeholder="16-character App Password" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
-      
-      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
-        <button class="btn" onclick="closeLoginModal()" style="background: var(--bg-card); border: 1px solid var(--border);">Cancel</button>
-        <button class="btn btn-primary" onclick="submitLogin()">Log In</button>
+      <!-- Login Section -->
+      <div id="login-section">
+        <h3 style="color: var(--text-primary); font-family: var(--font-main); margin-bottom: 5px;">🔑 Admin Login</h3>
+        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">Access reporting modules by entering your authorized credentials.</p>
+        
+        <input type="email" id="auth-email" placeholder="you@gmail.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary); margin-bottom: 10px;" />
+        <input type="password" id="auth-password" placeholder="Account Password" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+          <span style="font-size: 11px; color: var(--accent-color); cursor: pointer;" onclick="toggleAuthMode('register')">Need an account? Register</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" onclick="closeLoginModal()" style="background: var(--bg-card); border: 1px solid var(--border);">Cancel</button>
+            <button class="btn btn-primary" onclick="submitLogin()">Log In</button>
+          </div>
+        </div>
       </div>
+
+      <!-- Register Section -->
+      <div id="register-section" style="display: none;">
+        <h3 style="color: var(--text-primary); font-family: var(--font-main); margin-bottom: 5px;">📝 Register Admin</h3>
+        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">Setup a database account bound to a secure Google App Token.</p>
+        
+        <input type="email" id="reg-email" placeholder="you@gmail.com" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary); margin-bottom: 10px;" />
+        <input type="password" id="reg-password" placeholder="Choose Password" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary); margin-bottom: 10px;" />
+        <input type="password" id="reg-app-password" placeholder="16-character Gmail App Password" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-base); color: var(--text-primary);" />
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+          <span style="font-size: 11px; color: var(--accent-color); cursor: pointer;" onclick="toggleAuthMode('login')">Have an account? Login</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" onclick="closeLoginModal()" style="background: var(--bg-card); border: 1px solid var(--border);">Cancel</button>
+            <button class="btn btn-primary" onclick="submitRegister()">Register</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -999,6 +1025,18 @@
       </div>
 
       <div style="flex: 1; min-height: 5vh;"></div>
+
+      <div class="theme-switch-wrapper" style="margin-bottom: 12px;">
+        <span
+          style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono);">Voice Output</span>
+        <label class="switch">
+          <input type="checkbox" id="voice-toggle" checked onchange="toggleVoiceOutput()">
+          <span class="slider">
+            <span class="on">VOICE</span>
+            <span class="off">MUTE</span>
+          </span>
+        </label>
+      </div>
 
       <div class="theme-switch-wrapper" style="margin-bottom: 40px;">
         <span
@@ -1251,10 +1289,23 @@
           style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-family);">
       </div>
 
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-base);">
+        <label style="display: flex; align-items: center; gap: 10px; font-size: var(--text-sm); font-weight: 700; color: var(--text-primary);">
+          <input type="checkbox" id="commit-send-email" onchange="toggleCommitEmailFields()">
+          Send report by email after saving
+        </label>
+        <div id="commit-email-fields" style="display: none; flex-direction: column; gap: 8px;">
+          <label style="font-size: var(--text-xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Recipient Email</label>
+          <input type="email" id="commit-report-recipient" placeholder="recipient@example.com"
+            style="padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-family); background: var(--bg-surface); color: var(--text-primary);">
+          <p id="commit-email-auth-note" style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">Requires admin login with a Gmail app password.</p>
+        </div>
+      </div>
+
       <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
         <button class="btn" style="background: var(--bg-base); border: 1px solid var(--border);"
           onclick="closeCommitModal()">Skip</button>
-        <button class="btn btn-primary" onclick="confirmCommit()">Commit to History</button>
+        <button class="btn btn-primary" id="commit-history-btn" onclick="confirmCommit()">Commit to History</button>
       </div>
     </div>
   </div>
@@ -1384,16 +1435,23 @@
   <!-- FLOATING CHAT UI -->
   <div class="chat-btn" onclick="toggleChat()">💬</div>
   <div class="chat-panel" id="chat-panel">
-    <div class="chat-header">
+    <div class="chat-header" style="padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center;">
       <div>
         <div style="font-weight: 700; font-size: 14px;">Expert AI Assistant</div>
         <div style="font-size: 10px; opacity: 0.8;">Grounded in Neo4j Knowledge Graph</div>
       </div>
-      <button class="btn" onclick="toggleChat()" style="background:transparent; color:white; padding:0;">✕</button>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <label style="font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer; color: white;">
+          <input type="checkbox" id="chat-auto-speak" style="cursor: pointer;"> 🔊 Auto-Speak
+        </label>
+        <button class="btn" onclick="toggleChat()" style="background:transparent; color:white; padding:0;">✕</button>
+      </div>
     </div>
     <div class="chat-messages" id="chat-messages">
-      <div class="msg ai">Hello! I am your Dallas 311 Expert. I have access to Audit Reports, Web Insights, and our
-        previous conversations. How can I help you today?</div>
+      <div class="msg ai">
+        <div class="ai-speech-target">Hello! I am your Dallas 311 Expert. I have access to Audit Reports, Web Insights, and our previous conversations. How can I help you today?</div>
+        <button onclick="readAloud(this.parentElement.querySelector('.ai-speech-target').innerText)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:10px; padding:0; margin-top:6px; display:inline-flex; align-items:center; gap:4px;"><span style="font-size:12px;">🔊</span> Listen</button>
+      </div>
     </div>
     <div class="chat-input-area">
       <input type="text" class="chat-input" id="chat-input" placeholder="Ask about model logic or city data..."
@@ -1424,6 +1482,52 @@
     let _session_id = 'session_' + Math.random().toString(36).substring(7);
     let _currentResults = null;
 
+    async function readAloud(text) {
+      const voiceToggle = document.getElementById('voice-toggle');
+      const autoSpeak = document.getElementById('chat-auto-speak');
+      const isVoiceActive = (voiceToggle && voiceToggle.checked) || (autoSpeak && autoSpeak.checked);
+      if (!isVoiceActive) return;
+
+      const plainText = text.replace(/Listen$/i, '').replace(/[*#_~]/g, '').trim();
+      if (!plainText) return;
+
+      // Try Cloud/Proxy Synthesis (Groq or Edge-TTS)
+      try {
+        const resp = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: plainText })
+        });
+        
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const audioUrl = URL.createObjectURL(blob);
+          const audio = new Audio(audioUrl);
+          audio.play();
+          return; // Success, exit
+        }
+        console.warn("Proxy TTS failed. Defaulting to local Speech Engine.");
+      } catch (e) {
+        console.warn("Proxy TTS exception. Defaulting to local Speech Engine:", e);
+      }
+
+      // Tier 3: Native Fallback (Offline)
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(plainText);
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const naturalVoice = voices.find(v => 
+          (v.name.toLowerCase().includes('natural') || 
+           v.name.toLowerCase().includes('google') || 
+           v.name.toLowerCase().includes('premium')) && 
+          v.lang.startsWith('en')
+        ) || voices.find(v => v.lang.startsWith('en'));
+        if (naturalVoice) utterance.voice = naturalVoice;
+      }
+      window.speechSynthesis.speak(utterance);
+    }
+
     function toggleChat() {
       const panel = document.getElementById('chat-panel');
       panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
@@ -1435,7 +1539,7 @@
       if (panel.style.display !== 'flex') toggleChat();
 
       const input = document.getElementById('chat-input');
-      input.value = `Tell me more about the ${metricName} of ${value} based on Neo4j Graph.`;
+      input.value = `Tell me more about the ${metricName} metric of ${value}.`;
 
       // Wait 100ms to ensure the input is locked in
       setTimeout(() => sendChatMessage(), 100);
@@ -1477,7 +1581,17 @@
         console.log("[AI-Chat] Received reply from LLM.");
 
         // Replace loading with real answer
-        loadingMsg.innerHTML = marked.parse(data.answer);
+        loadingMsg.innerHTML = `
+          <div class="ai-speech-target">${marked.parse(data.answer)}</div>
+          <button onclick="readAloud(this.parentElement.querySelector('.ai-speech-target').innerText)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:10px; padding:0; margin-top:6px; display:inline-flex; align-items:center; gap:4px;"><span style="font-size:12px;">🔊</span> Listen</button>
+        `;
+        
+        if (document.getElementById('chat-auto-speak').checked || 
+            (document.getElementById('voice-toggle') && document.getElementById('voice-toggle').checked)) {
+          const speechContent = loadingMsg.querySelector('.ai-speech-target');
+          if (speechContent) readAloud(speechContent.innerText);
+        }
+        
         container.scrollTop = container.scrollHeight;
       } catch (e) {
         console.error("[AI-Chat] Chat failed:", e);
@@ -2091,22 +2205,75 @@
     }
 
     // ── COMMIT MODAL ─────────────────────────────────────────────────────────
-    function openCommitModal() { document.getElementById('commit-modal').style.display = 'flex'; }
+    function openCommitModal() {
+      document.getElementById('commit-modal').style.display = 'flex';
+      const recipient = document.getElementById('commit-report-recipient');
+      if (recipient && !recipient.value && currentAdminEmail) recipient.value = currentAdminEmail;
+      toggleCommitEmailFields();
+    }
     function closeCommitModal() { document.getElementById('commit-modal').style.display = 'none'; }
+
+    function toggleCommitEmailFields() {
+      const checked = document.getElementById('commit-send-email')?.checked;
+      const fields = document.getElementById('commit-email-fields');
+      const note = document.getElementById('commit-email-auth-note');
+      if (fields) fields.style.display = checked ? 'flex' : 'none';
+      if (note) {
+        note.innerText = isLoggedIn
+          ? `Sender authenticated as ${currentAdminEmail || 'admin'}.`
+          : 'Requires admin login with a Gmail app password.';
+      }
+    }
 
     async function confirmCommit() {
       const alias = document.getElementById('model-alias').value;
-      const res = await fetch('/api/history/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ custom_name: alias })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
+      const sendEmail = document.getElementById('commit-send-email')?.checked;
+      const recipient = document.getElementById('commit-report-recipient')?.value.trim();
+      const btn = document.getElementById('commit-history-btn');
+
+      if (sendEmail && !recipient) return alert("Please enter a recipient email.");
+      if (sendEmail && !isLoggedIn) {
+        alert("Please log in as an admin before sending the report.");
+        openLoginModal();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = sendEmail ? 'Saving & Sending...' : 'Saving...';
+
+      try {
+        const res = await fetch('/api/history/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ custom_name: alias })
+        });
+        const data = await res.json();
+        if (data.status !== 'success') {
+          alert("Error saving model: " + data.error);
+          return;
+        }
+
+        if (sendEmail) {
+          const emailRes = await fetch('/api/send_email_report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipient_email: recipient })
+          });
+          const emailData = await emailRes.json();
+          if (!emailData.success) {
+            alert(`Model saved, but email failed: ${emailData.error}`);
+          } else {
+            alert(emailData.message);
+          }
+        }
+
         closeCommitModal();
         showView('history');
-      } else {
-        alert("Error saving model: " + data.error);
+      } catch (err) {
+        alert("Commit failed: " + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Commit to History';
       }
     }
 
@@ -2166,6 +2333,7 @@
 
     // ── AUTH & REPORT LOGIC ──────────────────────────────────────────────────
     let isLoggedIn = false;
+    let currentAdminEmail = "";
 
     async function checkAuthStatus() {
       try {
@@ -2176,13 +2344,16 @@
         
         if (data.logged_in) {
           isLoggedIn = true;
+          currentAdminEmail = data.user || "";
           if (navBtn) navBtn.innerText = 'Logout';
           if (emailBtn) emailBtn.style.display = 'block';
         } else {
           isLoggedIn = false;
+          currentAdminEmail = "";
           if (navBtn) navBtn.innerText = 'Admin Login';
           if (emailBtn) emailBtn.style.display = 'none';
         }
+        toggleCommitEmailFields();
       } catch (e) { console.error("Auth check failed", e); }
     }
 
@@ -2191,6 +2362,40 @@
         logoutAdmin();
       } else {
         openLoginModal();
+      }
+    }
+
+    function toggleAuthMode(mode) {
+      const loginSec = document.getElementById('login-section');
+      const regSec = document.getElementById('register-section');
+      if (mode === 'register') {
+        loginSec.style.display = 'none';
+        regSec.style.display = 'block';
+      } else {
+        loginSec.style.display = 'block';
+        regSec.style.display = 'none';
+      }
+    }
+
+    async function submitRegister() {
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value.trim();
+      const app_password = document.getElementById('reg-app-password').value.trim();
+      
+      if (!email || !password || !app_password) return alert("All fields are mandatory.");
+      
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email, password, app_password })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert("Registration successful! You can now log in.");
+        toggleAuthMode('login');
+      } else {
+        alert("Registration failed: " + data.error);
       }
     }
 
@@ -2285,6 +2490,27 @@
       });
       const data = await res.json();
       pollStatus();
+    }
+
+    function toggleVoiceOutput() {
+      const isVoiceActive = document.getElementById('voice-toggle').checked;
+      localStorage.setItem('voice_output', isVoiceActive ? 'active' : 'muted');
+      
+      const autoSpeak = document.getElementById('chat-auto-speak');
+      if (autoSpeak) {
+        autoSpeak.checked = isVoiceActive;
+      }
+    }
+
+    function initVoiceOutput() {
+      const saved = localStorage.getItem('voice_output') || 'active';
+      const toggle = document.getElementById('voice-toggle');
+      if (toggle) toggle.checked = (saved === 'active');
+      
+      const autoSpeak = document.getElementById('chat-auto-speak');
+      if (autoSpeak) {
+        autoSpeak.checked = (saved === 'active');
+      }
     }
 
     // ── THEME LOGIC ──────────────────────────────────────────────────────────
@@ -2495,6 +2721,7 @@
       }
     }
 
+    initVoiceOutput();
     initTheme();
     const bootstrap = JSON.parse(document.getElementById('dashboard-bootstrap').textContent);
     if (bootstrap) {

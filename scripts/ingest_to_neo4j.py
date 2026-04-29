@@ -1,17 +1,20 @@
 import os
 import pandas as pd
 import uuid
+from pathlib import Path
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
 
-load_dotenv()
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env", override=True)
 
 URI = os.getenv("NEO4J_URI")
 USERNAME = os.getenv("NEO4J_USERNAME")
 PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-ONTOLOGY_CSV = "data/reports/Service Audit and Performance Evaluation Ontology - Table 1.csv"
-AUDIT_CSV = "data/reports/Fiscal Year 2026 Recommended Audit Work Plan Engagements - Table 1.csv"
+REPORTS_DIR = ROOT / "knowledge" / "reports"
+ONTOLOGY_CSV = REPORTS_DIR / "Service Audit and Performance Evaluation Ontology - Table 1.csv"
+AUDIT_CSV = REPORTS_DIR / "Fiscal Year 2026 Recommended Audit Work Plan Engagements - Table 1.csv"
 
 def generate_id(name):
     return str(uuid.uuid5(uuid.NAMESPACE_DNS, name))

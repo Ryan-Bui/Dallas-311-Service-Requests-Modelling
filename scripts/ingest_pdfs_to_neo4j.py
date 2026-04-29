@@ -1,38 +1,51 @@
 import os
 import uuid
+import sys
+from pathlib import Path
 from pypdf import PdfReader
 from neo4j import GraphDatabase
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
 
-load_dotenv()
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT))
+load_dotenv(ROOT / ".env", override=True)
+
+from inference.embedding_factory import (
+    create_embeddings_service,
+    embed_documents_batch,
+    get_embedding_dimensions,
+    get_embedding_model,
+    get_embedding_provider,
+)
 
 URI = os.getenv("NEO4J_URI")
 USERNAME = os.getenv("NEO4J_USERNAME")
 PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-REPORTS_DIR = "data/reports"
+REPORTS_DIR = ROOT / "knowledge" / "reports"
 
 def ingest_pdfs():
     if not all([URI, USERNAME, PASSWORD]):
         print("Error: Neo4j credentials missing in .env")
         return
 
-    if not os.path.exists(REPORTS_DIR):
+    if not REPORTS_DIR.exists():
         print(f"Directory {REPORTS_DIR} not found.")
         return
 
-    # Use the same model as the main RAG chain for consistency
-    embeddings_service = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
-        google_api_key=os.getenv("GOOGLE_API_KEY")
-    )
+    embeddings_enabled = os.getenv("SKIP_EMBEDDINGS", os.getenv("SKIP_GEMINI_EMBEDDINGS", "")).lower() not in {"1", "true", "yes"}
+    embeddings_service = None
+    if embeddings_enabled:
+        embeddings_service = create_embeddings_service()
+        print(
+            f"Using {get_embedding_provider()} embeddings: "
+            f"{get_embedding_model()} ({get_embedding_dimensions()} dimensions)"
+        )
     
     driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    pdf_files = [f for f in os.listdir(REPORTS_DIR) if f.endswith(".pdf")]
+    pdf_files = sorted(REPORTS_DIR.glob("*.pdf"))
     
     if not pdf_files:
         print(f"No PDFs found in {REPORTS_DIR}.")
@@ -44,15 +57,9 @@ def ingest_pdfs():
         dept_map = {record["name"]: record["id"] for record in result}
         print(f"Loaded {len(dept_map)} departments from Neo4j for tagging.")
 
-    for pdf_file in pdf_files:
-        # Check if already ingested
-        with driver.session() as session:
-            count = session.run("MATCH (c:DocumentChunk {source: $file}) RETURN count(c) as count", file=pdf_file).single()["count"]
-            if count > 0:
-                print(f"Skipping {pdf_file} (Already ingested).")
-                continue
-
-        file_path = os.path.join(REPORTS_DIR, pdf_file)
+    for file_path in pdf_files:
+        pdf_file = file_path.name
+        print(f"Ingesting {pdf_file}...")
         print(f"Processing {pdf_file}...")
         
         try:
@@ -64,22 +71,30 @@ def ingest_pdfs():
             batch_size = 50
             for i in range(0, len(chunks), batch_size):
                 batch_chunks = chunks[i:i + batch_size]
-                embeddings = embeddings_service.embed_documents(batch_chunks)
+                embeddings, embeddings_enabled = embed_documents_batch(
+                    embeddings_service,
+                    batch_chunks,
+                    embeddings_enabled,
+                )
                 
                 with driver.session() as session:
                     source_type = "Golden" if "knowledge" in pdf_file.lower() else "Report"
                     
-                    for chunk_text, embedding in zip(batch_chunks, embeddings):
-                        chunk_id = str(uuid.uuid4())
+                    for offset, (chunk_text, embedding) in enumerate(zip(batch_chunks, embeddings)):
+                        chunk_index = i + offset
+                        chunk_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{pdf_file}:{chunk_index}"))
                         
                         # Ingest chunk
                         session.run("""
+                            MERGE (doc:DocumentSource {name: $source})
                             MERGE (c:DocumentChunk {id: $id})
                             SET c.content = $content,
                                 c.embedding = $embedding,
+                                c.chunk_index = $chunk_index,
                                 c.source = $source,
                                 c.type = $type
-                        """, id=chunk_id, content=chunk_text, embedding=embedding, source=pdf_file, type=source_type)
+                            MERGE (c)-[:BELONGS_TO]->(doc)
+                        """, id=chunk_id, content=chunk_text, embedding=embedding, chunk_index=chunk_index, source=pdf_file, type=source_type)
                         
                         # Detect and Link Department
                         for d_name, d_id in dept_map.items():

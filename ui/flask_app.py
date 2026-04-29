@@ -46,8 +46,16 @@ from groq import Groq
 # ── Path setup ────────────────────────────────────────────────────────────────
 ROOT      = Path(__file__).resolve().parents[1]   # project root
 UI_DIR    = Path(__file__).resolve().parent        # ui/
-UPLOAD_DIR = ROOT / "data" / "uploaded"
-ARTIFACTS_DIR = ROOT / "models"
+
+# Render Persistent Disk detection
+PERSISTENT_DIR = Path("/var/data")
+if PERSISTENT_DIR.exists():
+    STORAGE_BASE = PERSISTENT_DIR
+else:
+    STORAGE_BASE = ROOT
+
+UPLOAD_DIR = STORAGE_BASE / "data" / "uploaded"
+ARTIFACTS_DIR = STORAGE_BASE / "models"
 HISTORY_DIR = ARTIFACTS_DIR / "history"
 RESULTS_PATH = ARTIFACTS_DIR / "latest_results.json"
 
@@ -74,6 +82,26 @@ app = Flask(__name__, static_folder=str(UI_DIR))
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dallas_311_fallback_secret")
 if _CORS:
     _CORS(app)
+
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+
+DB_PATH = STORAGE_BASE / "userbase.db"
+
+def init_auth_db():
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admins (
+            email TEXT PRIMARY KEY,
+            password_hash TEXT NOT NULL,
+            gmail_app_password TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_auth_db()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -1653,6 +1681,44 @@ def transcribe_audio():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/tts', methods=['POST'])
+def api_tts():
+    """Synthesize text using Edge-TTS (free, high-quality, unlimited)."""
+    data = request.json or {}
+    text = data.get('text', '').strip()
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+        
+    try:
+        import asyncio
+        import edge_tts
+        import tempfile
+        import os
+        from flask import Response
+        
+        async def generate_edge_audio(text_in):
+            communicate = edge_tts.Communicate(text_in, "en-US-GuyNeural")
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+                edge_tmp_path = tmp.name
+            await communicate.save(edge_tmp_path)
+            return edge_tmp_path
+
+        edge_path = asyncio.run(generate_edge_audio(text))
+        
+        try:
+            with open(edge_path, 'rb') as f:
+                audio_bytes = f.read()
+        finally:
+            if os.path.exists(edge_path):
+                os.remove(edge_path)
+                
+        return Response(audio_bytes, mimetype="audio/mpeg")
+        
+    except Exception as e:
+        logger.exception(f"Edge-TTS synthesis failed: {e}")
+        return jsonify({"error": f"TTS generation error: {e}"}), 500
+
+
 @app.route("/api/reset", methods=["POST"])
 def reset_pipeline():
     """Reset state back to idle (only when not running)."""
@@ -1769,19 +1835,17 @@ def chat():
             System: You are an academic researcher analyzing the Dallas 311 project. 
             Rule: Speak like a normal human using simple, plain English. ABSOLUTELY AVOID consultant jargon, fluff, and overly complex terminology (e.g., NEVER use words like leverage, methodology, synergy, optimization, strategic alignment, utilize, or pinpoint).
             
-            PROJECT METRICS:
+            PROJECT METRICS (Live Dashboard Numbers):
             {telemetry}
             
-            BACKGROUND DATA:
+            BACKGROUND DATA (Neo4j Graph & PDF Insights):
             {facts}
 
             STRICT RULES:
             - Be extremely concise. Give your answer in 2 to 3 sentences maximum.
-            - Do not write a long introduction, do not restate the question, and do not repeat yourself. Get straight to the point.
-            - Address the Human's query using the facts above.
-            - If the facts provided seem physically impossible or exaggerated, call it out instead of validating it.
-            - Never invent a relationship between the ML metrics and external background stats if they do not logically connect.
-            - If you cannot find the necessary information in the BACKGROUND DATA or PROJECT METRICS to answer the HUMAN QUERY accurately, output ONLY the exact word "NEED_EXPLORER". Do not say anything else.
+            - Get straight to the point. Answer the question based on the PROJECT METRICS or BACKGROUND DATA above.
+            - Do not be overly literal or argumentative about Neo4j source locations if the answer is clear in the telemetry.
+            - If you cannot find the necessary information in either BACKGROUND DATA or PROJECT METRICS, output ONLY the exact word "NEED_EXPLORER". Do not say anything else.
             
             HUMAN QUERY: {query}
             RESPONSE:
@@ -1868,6 +1932,29 @@ def chat():
         logger.error(f"[Chat] Fatal Orchestration Error: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/auth/register', methods=['POST'])
+def api_register():
+    data = request.json or {}
+    email = data.get('email')
+    password = data.get('password')
+    app_password = data.get('app_password', '')
+    
+    if not email or not password:
+        return jsonify({"success": False, "error": "Email and Password are required."}), 400
+
+    hashed = generate_password_hash(password)
+    
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO admins (email, password_hash, gmail_app_password) VALUES (?, ?, ?)", 
+                       (email, hashed, app_password))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "message": "Admin registered successfully."})
+    except sqlite3.IntegrityError:
+        return jsonify({"success": False, "error": "This admin email is already registered."}), 400
+
 @app.route('/api/auth/login', methods=['POST'])
 def api_login():
     data = request.json or {}
@@ -1877,11 +1964,21 @@ def api_login():
     if not email or not password:
         return jsonify({"success": False, "error": "Email and Password are required."}), 400
         
-    if not email.endswith('@gmail.com'):
-         return jsonify({"success": False, "error": "Only standard Gmail addresses are allowed."}), 400
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    cursor.execute("SELECT password_hash, gmail_app_password FROM admins WHERE email = ?", (email,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        return jsonify({"success": False, "error": "Invalid credentials or user not registered."}), 401
+        
+    hashed_pw, app_pw = row
+    if not check_password_hash(hashed_pw, password):
+        return jsonify({"success": False, "error": "Invalid credentials."}), 401
 
     session['admin_email'] = email
-    session['admin_password'] = password
+    session['admin_password'] = app_pw
     return jsonify({"success": True, "message": "Logged in successfully.", "user": email})
 
 @app.route('/api/auth/logout', methods=['POST', 'GET'])
@@ -1915,18 +2012,30 @@ def api_send_report():
     if not live_results:
         return jsonify({"success": False, "error": "No performance data available to email."}), 400
         
+    sender_email = os.getenv("MAIL_DEFAULT_SENDER")
+    app_password = os.getenv("MAIL_APP_PASSWORD")
+    
+    # Fallback to session if env vars are missing or placeholders
+    if not sender_email or sender_email == "your-email@gmail.com":
+        sender_email = session.get('admin_email')
+    if not app_password or app_password == "your-app-password":
+        app_password = session.get('admin_password')
+        
+    if not sender_email or not app_password:
+        return jsonify({"success": False, "error": "Email sender not configured. Please set MAIL_DEFAULT_SENDER and MAIL_APP_PASSWORD in .env."}), 400
+
     from agents.email_agent import send_gmail_report
-    success = send_gmail_report(
-        sender_email=session['admin_email'],
-        app_password=session['admin_password'],
+    success, error_message = send_gmail_report(
+        sender_email=sender_email,
+        app_password=app_password,
         recipient_email=recipient,
         report_data=live_results
     )
     
     if success:
         return jsonify({"success": True, "message": f"Report sent securely to {recipient}."})
-    else:
-        return jsonify({"success": False, "error": "Failed to send email. Check your credentials/App Password."}), 500
+    error_detail = error_message or "Check your credentials/App Password."
+    return jsonify({"success": False, "error": f"Failed to send email. {error_detail}"}), 500
 
 @app.route('/favicon.png')
 def serve_favicon():
@@ -1959,7 +2068,7 @@ if __name__ == "__main__":
     atexit.register(graceful_exit)
 
     try:
-        app.run(host="0.0.0.0", port=args.port, debug=args.debug, use_reloader=True)
+        app.run(host="0.0.0.0", port=args.port, debug=args.debug, use_reloader=False)
     except (SystemExit, KeyboardInterrupt):
         pass
     except Exception as e:

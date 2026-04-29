@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Setup paths
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(ROOT))
-load_dotenv()
+load_dotenv(ROOT / ".env", override=True)
 
 def ingest_expert_wisdom():
     file_path = ROOT / "knowledge" / "expert_metric_definitions.md"

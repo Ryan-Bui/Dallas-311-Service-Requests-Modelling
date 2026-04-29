@@ -4,13 +4,20 @@ import sys
 from pathlib import Path
 from neo4j import GraphDatabase
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
 
 # Setup paths
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(ROOT))
-load_dotenv(override=True)
+load_dotenv(ROOT / ".env", override=True)
+
+from inference.embedding_factory import (
+    create_embeddings_service,
+    embed_documents_batch,
+    get_embedding_dimensions,
+    get_embedding_model,
+    get_embedding_provider,
+)
 
 URI = os.getenv("NEO4J_URI")
 USERNAME = os.getenv("NEO4J_USERNAME")
@@ -23,11 +30,14 @@ def ingest_markdowns():
         print("Error: Neo4j credentials missing in .env")
         return
 
-    # Use the same model as the main RAG chain for consistency
-    embeddings_service = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
-        google_api_key=os.getenv("GOOGLE_API_KEY")
-    )
+    embeddings_enabled = os.getenv("SKIP_EMBEDDINGS", os.getenv("SKIP_GEMINI_EMBEDDINGS", "")).lower() not in {"1", "true", "yes"}
+    embeddings_service = None
+    if embeddings_enabled:
+        embeddings_service = create_embeddings_service()
+        print(
+            f"Using {get_embedding_provider()} embeddings: "
+            f"{get_embedding_model()} ({get_embedding_dimensions()} dimensions)"
+        )
     
     try:
         driver = GraphDatabase.driver(URI, auth=(USERNAME, PASSWORD))
@@ -65,20 +75,26 @@ def ingest_markdowns():
             batch_size = 50
             for i in range(0, len(chunks), batch_size):
                 batch_chunks = chunks[i:i + batch_size]
-                embeddings = embeddings_service.embed_documents(batch_chunks)
+                embeddings, embeddings_enabled = embed_documents_batch(
+                    embeddings_service,
+                    batch_chunks,
+                    embeddings_enabled,
+                )
                 
                 with driver.session() as session:
-                    for chunk_text, embedding in zip(batch_chunks, embeddings):
-                        chunk_id = str(uuid.uuid4())
+                    for offset, (chunk_text, embedding) in enumerate(zip(batch_chunks, embeddings)):
+                        chunk_index = i + offset
+                        chunk_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{filename}:{chunk_index}"))
                         
                         # Ingest chunk
                         session.run("""
                             MERGE (c:DocumentChunk {id: $id})
                             SET c.content = $content,
                                 c.embedding = $embedding,
+                                c.chunk_index = $chunk_index,
                                 c.source = $source,
                                 c.type = $type
-                        """, id=chunk_id, content=chunk_text, embedding=embedding, source=filename, type="Report")
+                        """, id=chunk_id, content=chunk_text, embedding=embedding, chunk_index=chunk_index, source=filename, type="Report")
                         
                         # Detect and Link Department
                         for d_name, d_id in dept_map.items():

@@ -2398,8 +2398,8 @@
     "pr": "Stability check ready."
   },
   "data_path": "F:\\MASTERS\\SEM2\\6302ASDS\\Fina_final\\data\\uploaded\\sample2.csv",
-  "started_at": "2026-04-29T02:32:28.402443",
-  "finished_at": "2026-04-29T02:32:42.838782",
+  "started_at": "2026-04-29T15:47:21.517256",
+  "finished_at": "2026-04-29T15:48:37.661234",
   "split_info": {
     "train_size": 3978,
     "test_size": 995,

@@ -1,8 +1,18 @@
 import os
+import sys
+from pathlib import Path
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
 
-load_dotenv()
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT))
+load_dotenv(ROOT / ".env", override=True)
+
+from inference.embedding_factory import (
+    get_embedding_dimensions,
+    get_embedding_model,
+    get_embedding_provider,
+)
 
 URI = os.getenv("NEO4J_URI")
 USERNAME = os.getenv("NEO4J_USERNAME")
@@ -24,18 +34,23 @@ def setup_neo4j():
         session.run("CREATE CONSTRAINT audit_id_unique IF NOT EXISTS FOR (a:AuditTopic) REQUIRE a.id IS UNIQUE")
         session.run("CREATE CONSTRAINT chunk_id_unique IF NOT EXISTS FOR (c:DocumentChunk) REQUIRE c.id IS UNIQUE")
 
-        print("Creating Neo4j Vector Index (768 dimensions)...")
+        embedding_dimensions = get_embedding_dimensions()
+        print(
+            f"Creating Neo4j Vector Index ({embedding_dimensions} dimensions, "
+            f"{get_embedding_provider()}:{get_embedding_model()})..."
+        )
+        session.run("DROP INDEX chunk_embeddings IF EXISTS")
         # Vector index for PDF chunks
         # Using Neo4j 5.x syntax
-        session.run("""
+        session.run(f"""
             CREATE VECTOR INDEX chunk_embeddings IF NOT EXISTS
             FOR (c:DocumentChunk) ON (c.embedding)
-            OPTIONS {
-              indexConfig: {
-                `vector.dimensions`: 768,
+            OPTIONS {{
+              indexConfig: {{
+                `vector.dimensions`: {embedding_dimensions},
                 `vector.similarity_function`: 'cosine'
-              }
-            }
+              }}
+            }}
         """)
         
         print("Neo4j Schema Setup Complete.")
