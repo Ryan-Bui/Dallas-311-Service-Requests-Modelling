@@ -1,12 +1,33 @@
-GROQ_API_KEY= your_groq_API_key
+# LLM Configuration
+GROQ_API_KEY=
 GROQ_MODEL=llama-3.3-70b-versatile
-
-# Email delivery through Resend HTTPS API
-RESEND_API_KEY=your_resend_api_key
-RESEND_FROM_EMAIL=Dallas 311 Dashboard <onboarding@resend.dev>
 
 # Pipeline Settings
 MAX_DIAGNOSTIC_RETRIES=3
 P_VALUE_THRESHOLD=0.05
-# .env
-SKIP_REGULARIZATION=True //False to include regularization agent in the pipeline
+SKIP_REGULARIZATION=False
+
+# Google AI Studio (Dynamic Fallback via Key Only)
+GOOGLE_API_KEY=
+
+# Telemetry Suppression
+GOOGLE_CLOUD_DISABLE_GRPC_STATS=true
+GOOGLE_SDK_DISABLE_METRICS_EXPORT=true
+
+# Neo4j Graph
+NEO4J_URI=
+NEO4J_USERNAME=
+NEO4J_PASSWORD=
+
+#Tavily
+TAVILY_API_KEY=
+
+# Central Email Dispatch
+MAIL_DEFAULT_SENDER=
+MAIL_APP_PASSWORD=
+
+#openAI API Key
+OPENAI_API_KEY=
+
+#Resend API key
+RESEND_API_KEY=

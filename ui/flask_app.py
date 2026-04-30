@@ -36,7 +36,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables early
-load_dotenv()
+root_env = Path(__file__).resolve().parents[1] / ".env"
+ui_env = Path(__file__).resolve().parent / ".env"
+load_dotenv(root_env if root_env.exists() else ui_env)
 import warnings
 warnings.filterwarnings("ignore")
 import shutil
@@ -72,7 +74,7 @@ try:
 except ImportError:
     _CORS = None  # optional — not needed for same-origin requests
 from dotenv import load_dotenv
-load_dotenv(override=True)
+load_dotenv(ROOT / ".env" if (ROOT / ".env").exists() else UI_DIR / ".env", override=True)
 
 from inference.explainability_chain import create_explainability_chain, format_coef_summary, get_domain_context, Neo4jChatMemory
 from inference.llm_factory import get_llm
@@ -2012,12 +2014,31 @@ def api_send_report():
     if not live_results:
         return jsonify({"success": False, "error": "No performance data available to email."}), 400
         
+    # Prioritize Gmail SMTP credentials (session or .env)
+    sender_email = None
+    app_password = None
+
+    if session.get('admin_email') and session.get('admin_password'):
+        sender_email = session.get('admin_email')
+        app_password = session.get('admin_password')
+    else:
+        sender_email = os.getenv("MAIL_DEFAULT_SENDER")
+        app_password = os.getenv("MAIL_APP_PASSWORD")
+
     resend_api_key = os.getenv("RESEND_API_KEY")
     resend_sender = os.getenv("RESEND_FROM_EMAIL") or os.getenv("MAIL_DEFAULT_SENDER")
     if resend_api_key in {"", "your_resend_api_key", "re_xxxxxxxxx"}:
         resend_api_key = None
 
-    if resend_api_key:
+    if sender_email and app_password and sender_email != "your-email@gmail.com" and app_password != "your-app-password":
+        from agents.email_agent import send_gmail_report
+        success, error_message = send_gmail_report(
+            sender_email=sender_email,
+            app_password=app_password,
+            recipient_email=recipient,
+            report_data=live_results
+        )
+    elif resend_api_key:
         if not resend_sender:
             return jsonify({"success": False, "error": "Resend sender not configured. Please set RESEND_FROM_EMAIL in .env."}), 400
 
@@ -2029,24 +2050,7 @@ def api_send_report():
             report_data=live_results
         )
     else:
-        # Prioritize session credentials if logged in, fallback to .env
-        if session.get('admin_email') and session.get('admin_password'):
-            sender_email = session.get('admin_email')
-            app_password = session.get('admin_password')
-        else:
-            sender_email = os.getenv("MAIL_DEFAULT_SENDER")
-            app_password = os.getenv("MAIL_APP_PASSWORD")
-
-        if not sender_email or not app_password:
-            return jsonify({"success": False, "error": "Email sender not configured. Please set RESEND_API_KEY and RESEND_FROM_EMAIL, or configure MAIL_DEFAULT_SENDER and MAIL_APP_PASSWORD for Gmail SMTP."}), 400
-
-        from agents.email_agent import send_gmail_report
-        success, error_message = send_gmail_report(
-            sender_email=sender_email,
-            app_password=app_password,
-            recipient_email=recipient,
-            report_data=live_results
-        )
+        return jsonify({"success": False, "error": "Email sender not configured. Please set MAIL_DEFAULT_SENDER and MAIL_APP_PASSWORD for Gmail SMTP, or RESEND_API_KEY."}), 400
     
     if success:
         return jsonify({"success": True, "message": f"Report sent securely to {recipient}."})
